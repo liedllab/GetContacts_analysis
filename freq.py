@@ -32,16 +32,16 @@ class Frequency:
 
     :attribute df: pandas.DataFrame, containing the data from the tsv-file.
     :attribute filename: str, the path to the tsv-file containing the data.
+    :attribute selection: Optional[tuple[tuple[int, int], tuple[int, int]]],
+            The selection that was applied on the original data.
+        :default: None, The usual workflow is to calculate the interactions for all residues and
+            then later choose the selection with :method:`select`.
     :attribute interaction: Optional[str], short description of the kind of interaction the
             Frequencies were calculated for.
         :default: "all"
     :attribute name: Optional[str], individual name, that can be chosen. If not provided, the value
             for :instance_attribute:`interaction` is used.
         :default: None
-    :attribute selection: Optional[tuple[tuple[int, int], tuple[int, int]]],
-            The selection that was applied on the original data.
-        :default: None, The usual workflow is to calculate the interactions for all residues and
-            then later choose the selection with :method:`select`.
 
     :classmethod from_tsv:  usually used to initialize a new Frequency object.
 
@@ -51,26 +51,33 @@ class Frequency:
     :method compatible: check wether its sensible to merge the data of two :instance:`Frequency`'s.
     """
 
-    def __init__(self, df: pd.DataFrame, filename:str,
-                 interaction: Optional[str] = "all",
-                 name: Optional[str] = None,
-                 selection: Optional[Tuple[Tuple[int, int], Tuple[int, int]]] = None):
+    def __init__(self, df: pd.DataFrame, filename:str, *,
+                 selection: Optional[Tuple[Tuple[int, int], Tuple[int, int]]] = None,
+                 **kwargs):
+#                  interaction: Optional[str] = "all",
+#                  name: Optional[str] = None,
+#                  ):
 
         if not isinstance(df, pd.DataFrame):
             raise ValueError("DataFrame expected.")
+
+        defaults = _kw_handler({
+            'interaction' : 'all',
+            'name': None,
+            }, kwargs)
+
         self._df = df
         self._filename = filename
-        self._interaction = interaction
-        self.name = name if name else interaction
+        self._selection = selection
+        self._interaction = defaults['interaction']
+        self.name = defaults['name'] if defaults['name'] else defaults['interaction']
         # if not name:
         #     self.name = interaction
         # else:
         #     self.name = name
-        self._selection = selection
 
     @classmethod
-    def from_tsv(cls, filename: str, interaction: Optional[str] = "all",
-                 name: Optional[str] = None):
+    def from_tsv(cls, filename: str, **kwargs):
         """Classmethod to initialize a new Frequency object.
 
         :param filename: str, path to the file containing the data.
@@ -95,7 +102,7 @@ class Frequency:
         df = df.drop(labels=[0,3], axis=1)
         df.columns = ['res 1', 'number 1', 'res 2', 'number 2', 'contact_frequency']
 
-        return cls(df, filename, interaction, name)
+        return cls(df, filename, **kwargs)
 
     def select(self, residues:Tuple[int, int], more: Optional[Tuple[int, int]]=None):
         """Method for the selection of ranges of residues.
@@ -114,11 +121,14 @@ class Frequency:
             df = self.df[self.df['number 1'].between(*residues) | \
                     self.df['number 2'].between(*residues)]
 
-        return self.__class__(df, self.filename, self.interaction, self.name, (residues, more))
+        return self.__class__(df, self.filename, selection = (residues, more),
+                interaction = self.interaction, name = self.name,
+                )
 
     def flare(self, *, cutoff = 0.6, cmap = 'Greys', cbar = True, one_letter = True,
-             linewidth = 6, fontsize = 10, shift = 0, label_offset = 0.2,
-             tick_length = 3, tick_width = 1):
+             **kwargs):
+#              linewidth = 6, fontsize = 10, shift = 0, label_offset = 0.2,
+#              tick_length = 3, tick_width = 1):
         """Create a flareplot using the systems data.
 
         :param cutoff: float, datapoints with a frequency below the cutoff threshold are not used
@@ -139,6 +149,17 @@ class Frequency:
         :param tick_length: int|float, length of the ticks.
         :param tick_width: int|float, width of the ticks.
         """
+
+        defaults = _kw_handler( {
+            'linewidth' : 6,
+            'fontsize' : 10,
+            'shift' : 0,
+            'label_offset' : 0.2,
+            'tick_length' : 3,
+            'tick_width' : 1
+            }, kwargs)
+
+
         # apply cutoff to df
         cut = self.df[self.df['contact_frequency'] > cutoff].reset_index(drop=True)
 
@@ -157,7 +178,7 @@ class Frequency:
         fig = plt.figure()
         ax = fig.add_subplot(polar=True)
         # set zero location to be at 0°
-        ax.set_theta_zero_location('E', offset=shift)
+        ax.set_theta_zero_location('E', offset=defaults['shift'])
 
         cmap = mpl.cm.get_cmap(cmap)
         norm = mpl.colors.Normalize(vmin=cutoff, vmax=1)
@@ -166,8 +187,7 @@ class Frequency:
 
         # plot all connecting lines
         # for more information about the coordinates function bezier and the
-        # coordinate classes Polar and Cartesian check out the coordinates.py
-        # file.
+        # coordinate classes Polar and Cartesian check out the coordinates.py file.
         for i in cut.index:
             ax.plot(
                 *np.array(
@@ -180,7 +200,7 @@ class Frequency:
                 # color according to cmap and value
                 color=cmap(norm(cut.loc[i, 'contact_frequency'])),
                 # thicker lines for more frequent contacts
-                lw=linewidth * cut.loc[i, 'contact_frequency']**2,
+                lw=defaults['linewidth'] * cut.loc[i, 'contact_frequency']**2,
                 # less frequent contact lines are rendered earlier than more
                 # frequent contact lines. This makes sure the more important
                 # connecting lines are always on top.
@@ -198,25 +218,27 @@ class Frequency:
 
         # the following code is needed to have the labels at the edge of the
         # circle at the right angle
-
         plt.gcf().canvas.draw()
         angles = np.linspace(0,360, len(all_unique_labels), endpoint=False)
-
-        angles[np.cos(np.deg2rad(angles+shift)) < 0] += 180
+        angles[np.cos(np.deg2rad(angles+defaults['shift'])) < 0] += 180
         labels = []
         for label, angle in zip(ax.get_xticklabels(), angles):
             x,y = label.get_position()
-            lab = ax.text(x, y-label_offset,
-                          label.get_text(), transform=label.get_transform(), fontsize=fontsize,
-                          ha = label.get_ha(), va=label.get_va())
-            lab.set_rotation(angle+shift)
+            lab = ax.text(x, y-defaults['label_offset'],
+                          label.get_text(),
+                          transform=label.get_transform(),
+                          fontsize=defaults['fontsize'],
+                          ha = label.get_ha(), va=label.get_va(),
+                          )
+            lab.set_rotation(angle+defaults['shift'])
             labels.append(lab)
         ax.set_xticklabels([])
 
         #ticks for the edge of the circle needs to be plotted extra too
-        if tick_length:
+        if defaults['tick_length']:
             for t in np.deg2rad(np.linspace(0, 360, len(all_unique_labels), endpoint=False)):
-                ax.plot([t, t], [1,1-tick_length/100], lw=tick_width, color="k")
+                ax.plot([t, t], [1,1-defaults['tick_length']/100],
+                        lw=defaults['tick_width'], color='k')
 
         return fig
 
@@ -286,34 +308,61 @@ class Frequency:
         return f"{self.df.__repr__()}"
 
 
-def heatmap(data: pd.DataFrame,
+def heatmap(data: pd.DataFrame, *,
             title: Optional[str] = None,
-            cmap: str = 'Greens',
-            y_size: float = 4,
-            linewidths: float = 0.5,
-            linecolor: str = 'black',
-            annot: Optional[bool] = False,
-            vmin:float = 0,
-            vmax:float = 1,
-            cbar: bool = True):
-    """Function to conveniently plot the heatmap of interactions.
-    The plotting is done using seaborn.heatmap.
-    The arguments of the function are exactly the same as for
-    seaborn.heatmap. except title."""
+            y_size: float = 4, cmap: str = 'Greens', **kwargs):
+    """Function to plot the heatmap of interactions.
+
+    The plotting is done using `seaborn.heatmap`. For further more thorough documentation check
+    their website. Below some possible keywords are elaborated. All keywords that are compatible
+    with `seaborn.heatmap` can be used.
+
+    :param data: pandas.DataFrame, data of merged DataFrame to be plotted.
+    :param title: Optional[str], title of the figure.
+        :default: None
+    :param y_size: int|float, height of a single cell.
+        :default: 4
+    :param cmap: str, colormap to use for the connecting lines. Standard matplotlib colormaps
+            are supported.
+        :default: "Greens", which is a colormap from white to green.
+    :param cbar: bool, to display the colorbar belonging to the figure.
+        :default: True
+    :param vmin: float, low point for mapping the colors of :param cmap: to the cells values.
+        :default: 0
+    :param vmax: float, high point for mapping the colors of :param cmap: to the cells values.
+        :default: 1
+    :param annot: bool, to display the value inside the cells.
+        :default: False, which disables the display of the cell value.
+    :param linewidths: float, thickness of the lines inbetween the cells.
+        :default: 0.5
+    :param linecolor: str, color of the lines inbetween the cells.
+        :default: "black"
+
+    :returns: matplotlib.figure, containing the heatmap
+
+    :raises: pandas.errors.EmptyDataError, when the merged DataFrame is empty.
+    """
+
+    kwargs = _kw_handler({
+        'cbar' : True,
+        'vmin' : 0,
+        'vmax' : 1,
+        'annot' : False,
+        'linewidths' : 0.5,
+        'linecolor' : 'black',
+        }, kwargs, error=False)
 
     if data.empty:
-        raise pd.errors. EmptyDataError("The DataFrame is empty")
+        raise pd.errors.EmptyDataError("The DataFrame is empty")
 
     fig = plt.figure()
     ax = fig.add_subplot()
 
     sns.heatmap(data,
-                annot = annot,
-                linewidths = linewidths,
-                linecolor = linecolor,
-                cmap = cmap, vmin = vmin, vmax = vmax, cbar = cbar,
                 yticklabels = 1,
-                ax = ax)
+                ax = ax,
+                cmap = cmap,
+                **kwargs)
 
     # get square fields
     fig.set_size_inches(
@@ -330,36 +379,65 @@ def heatmap(data: pd.DataFrame,
 
     return fig
 
-def fingerprint(data: pd.DataFrame,
+def fingerprint(data: pd.DataFrame,*,
                 title: Optional[str] = None,
-                cmap: str = 'Greens',
-                y_size: float = 4,
-                linewidths: float = 0.5,
-                linecolor: str = 'black',
-                vmin: float = 0,
-                vmax: float = 1,
-                col_cluster: bool = False,
-                annot: Optional[bool] = False,
-                dendrogram_ratio: float = 0.2,
-                cbar_pos: Optional[Tuple[float, float, float, float]] = (1.5, 0.05, 0.1, 0.38)):
-    """Function to conveniently plot the fingerprint of interactions.
-    The plotting is done using seaborn.clustermap.
-    The arguments of the function are exactly the same as for
-    seaborn.clustermap."""
+                y_size: float = 4, cmap: str = 'Greens', **kwargs):
+    """Function to plot the fingerprint of interactions.
+
+    The plotting is done using `seaborn.clustermap`. For further more thorough documentation check
+    their website. Below some possible keywords are elaborated. All keywords that are compatible
+    with `seaborn.clustermap` can be used.
+
+    :param data: pandas.DataFrame, data of merged DataFrame to be plotted.
+    :param title: Optional[str], title of the figure.
+        :default: None
+    :param y_size: int|float, height of a single cell.
+        :default: 4
+    :param cmap: str, colormap to use for the connecting lines. Standard matplotlib colormaps
+            are supported.
+        :default: "Greens", which is a colormap from white to green.
+    :param cbar_pos: tuple[float, float, float, float], tuple of (left, bottom, width, heigth),
+            controls the position of the colorbar in the figure
+        :default: (1.5, 0.05, 0.1, 0.38)
+    :param vmin: float, low point for mapping the colors of :param cmap: to the cells values.
+        :default: 0
+    :param vmax: float, high point for mapping the colors of :param cmap: to the cells values.
+        :default: 1
+    :param annot: bool, to display the value inside the cells.
+        :default: False, which disables the display of the cell value.
+    :param linewidths: float, thickness of the lines inbetween the cells.
+        :default: 0.5
+    :param linecolor: str, color of the lines inbetween the cells.
+        :default: "black"
+    :param dendrogram_ratio: float|tuple[float, float], Proportion of the figure size devoted to
+            the dendrogram lines
+        :default: (0.2, 0)
+    :param col_cluster: bool, controls the clustering of the columns.
+        :default: False, which disables the clustering of the columns.
+
+    :returns: matplotlib.figure, containing the fingerprint
+
+    :raises: pandas.errors.EmptyDataError, when the merged DataFrame is empty.
+    """
+    kwargs = _kw_handler({
+        'cbar_pos' : (1.5, 0.05, 0.1, 0.38),
+        'vmin' : 0,
+        'vmax' : 1,
+        'annot' : False,
+        'linewidths' : 0.5,
+        'linecolor' : 'black',
+        'dendrogram_ratio' : (0.2, 0),
+        'col_cluster' : False,
+        }, kwargs, error=False)
 
     if data.empty:
         raise pd.errors.EmptyDataError("The DataFrame is empty")
 
     finger = sns.clustermap(
-        data,
-        annot = annot,
-        linewidths = linewidths,
-        linecolor = linecolor,
-        col_cluster = col_cluster,
-        dendrogram_ratio = dendrogram_ratio,
-        yticklabels = 1,
-        cmap = cmap, vmin = vmin, vmax = vmax, cbar_pos = cbar_pos
-    )
+            data,
+            yticklabels = 1,
+            cmap = cmap,
+            **kwargs)
 
     # square fields
     finger.fig.set_size_inches(
@@ -392,6 +470,23 @@ def _resize(sequence, target=5):
     smallest = min(sequence)
     return [i/smallest*target for i in sequence]
 
+def _kw_handler(defaults: dict, kwargs:dict, error: bool = False):
+    """updates a default dictionary with the kwargs dictionary.
+
+    :param defaults: dict, containing the default variable names and values.
+    :param kwargs: dict, dictionary containing the variable names and values from the function call
+
+    :returns: dict, updated defaults dictionary
+
+    :raises: KeyError, if `kwargs` contains a key that `defaults` does not.
+    """
+    defaults = defaults.copy()
+    if error:
+        for key in kwargs:
+            if not key in defaults:
+                raise KeyError(f"{key} not defined")
+    defaults.update(kwargs)
+    return defaults
 
 three2one = {
         'CYS' : 'C',
