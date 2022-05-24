@@ -1,10 +1,24 @@
 """Module containing two classes for handeling 2D coordinates."""
 
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 import numpy as np
 
+
+class Coordinate(ABC):
+    """Abstract class used for the classes Cartesian and Polar."""
+    @property
+    @abstractmethod
+    def values(self) -> np.array:
+        """return coordinates as :class:`np.array`"""
+
+    @abstractmethod
+    def convert(self):
+        """convert Coordinate to different Coordinate."""
+
+
 @dataclass
-class Cartesian:
+class Cartesian(Coordinate):
     """Container class to store the coordinates of a 2D point in cartesian
     cordinates.
 
@@ -21,19 +35,20 @@ class Cartesian:
         self._values = np.array((self.x, self.y))
 
     @property
-    def values(self):
+    def values(self) -> np.array:
         """return coordinates as :class:`np.array`"""
         return self._values
 
-    def convert(self):
+    def convert(self) -> Coordinate:
         """Method to convert from :class:`Cartesian` to :class:`Polar`."""
         r = np.sqrt(self.x**2+self.y**2)
         theta = np.arctan2(self.x,self.y)
 
         return Polar(theta=theta, r=r)
 
+
 @dataclass
-class Polar:
+class Polar(Coordinate):
     """Container class to store the coordinates of a 2D point in polar
     cordinates.
 
@@ -48,24 +63,26 @@ class Polar:
 
     def __post_init__(self):
         self.theta %= np.pi*2
-        self._values = np.array((self.theta, self.r))
+        self._values =  np.array((self.theta, self.r))
 
     @property
     def values(self):
         """return coordinates as :class:`np.array`"""
         return self._values
 
-    def convert(self):
+    def convert(self) -> Coordinate:
         """Method to convert from :class:`Polar` to :class:`Cartesian`."""
         x = self.r*np.sin(self.theta)
         y = self.r*np.cos(self.theta)
         return Cartesian(x,y)
 
-    def in_degrees(self):
+    def in_degrees(self) -> float:
         """Convenience method to convert :attr:`theta` from radians to degrees."""
         return self.theta*180/np.pi, self.r
 
-def bezier(starting_point, end_point, origin: Cartesian = Cartesian(0,0), n_points = 50):
+
+def bezier(starting_point: Coordinate, end_point: Coordinate,
+            origin: Coordinate = Cartesian(0,0), n_points: int = 50):
     """Calculates a bezier curve connecting three points.
 
         :param starting_point: Cartesian|Polar, start point of the bezier curve.
