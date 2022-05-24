@@ -1,11 +1,11 @@
 #! /usr/bin/env python3
 
 """Main module containing the :class:`Frequency` which is a container for handeling the \
-        tsv-datafile.
+tsv-datafile.
 
 :class:`Frequency` currently depends on `coordinates.py` to utilize the :method:`Frequency.flare`.
 
-The two plotting functions :func:`fingerprint` and :func:`heatmap` are available to
+The two plotting functions :func:`fingerprint` and :func:`heatmap` are available to \
 visualize the data and do not depend on `coordinates.py`.
 """
 
@@ -24,31 +24,40 @@ import coordinates as coord
 
 
 class Frequency:
-    """Container for the data loaded from a Frequency-file calculated with getcontacts.
+    """Container for the data loaded from a Frequency-file calculated with GetContacts.
 
-    The data from the tsv-file is stored as a pandas.DataFrame. Further some more information
-    can be provided which can be useful when multiple instances exist.
+    The data from the tsv-file is stored as a pandas.DataFrame. Furthermore, extra identifying
+    information can be added which can be useful when multiple instances exist.
     A instance should be initialized through :classmethod:`Frequency.from_tsv`.
 
-    :attribute df: pandas.DataFrame, containing the data from the tsv-file.
-    :attribute filename: str, the path to the tsv-file containing the data.
-    :attribute selection: Optional[tuple[tuple[int, int], tuple[int, int]]],
+    :attribute df: pandas.DataFrame
+            containing the data from the tsv-file.
+    :attribute filename: str
+            the path to the tsv-file containing the data.
+    :attribute selection: Optional[tuple[tuple[int, int], tuple[int, int]]]
             The selection that was applied on the original data.
-        :default: None, The usual workflow is to calculate the interactions for all residues and
+        :default: None
+            The usual workflow is to calculate the interactions for all residues and
             then later choose the selection with :method:`select`.
-    :attribute interaction: Optional[str], short description of the kind of interaction the
-            Frequencies were calculated for.
+    :attribute interaction: Optional[str]
+            short description of the kind of interaction the Frequencies were calculated for.
         :default: "all"
-    :attribute name: Optional[str], individual name, that can be chosen. If not provided, the value
-            for :instance_attribute:`interaction` is used.
+    :attribute name: Optional[str]
+            individual name, that can be chosen. If not provided, the value for
+            :instance_attribute:`interaction` is used.
         :default: None
 
-    :classmethod from_tsv:  usually used to initialize a new Frequency object.
+    :classmethod from_tsv:
+            usually used to initialize a new Frequency object.
 
-    :method select: select one or two ranges of residues.
-    :method flare: plot the data as a circular flareplot.
-    :method info: prints a short description of the system.
-    :method compatible: check wether its sensible to merge the data of two :instance:`Frequency`'s.
+    :method select:
+            select one or two ranges of residues.
+    :method flare:
+            plot the data as a circular flareplot.
+    :method info:
+            prints a short description of the system.
+    :method compatible:
+            check wether its sensible to merge the data of two :instance:`Frequency`'s.
     """
 
     def __init__(self, df: pd.DataFrame, filename:str, *,
@@ -80,12 +89,14 @@ class Frequency:
     def from_tsv(cls, filename: str, **kwargs):
         """Classmethod to initialize a new Frequency object.
 
-        :param filename: str, path to the file containing the data.
-        :param interaction: Optional[str], short description of the kind of interactoin the
-                Frequencies were calculated for.
+        :param filename: str
+                path to the file containing the data.
+        :param interaction: Optional[str]
+                short description of the kind of interactoin the Frequencies were calculated for.
             :default: "all"
-        :param name: Optional[str], name for the Frequency Object, e.g. its pdb code. If not
-                provided, the value of :param interaction: is used.
+        :param name: Optional[str]
+                name for the Frequency Object, e.g. its pdb code. If not provided,
+                the value of :param interaction: is used.
             :default: None
 
         :returns: :instance:`Frequency`
@@ -107,10 +118,13 @@ class Frequency:
     def select(self, residues:Tuple[int, int], more: Optional[Tuple[int, int]]=None):
         """Method for the selection of ranges of residues.
 
-        :param residues: tuple[int, int], range of residues that is selected.
-        :param more: Optional[tuple[int, int]], range of furter residues to be selected.
+        :param residues: tuple[int, int]
+                range of residues that is selected.
+        :param more: Optional[tuple[int, int]]
+                range of further residues to be selected.
 
-        :returns: :instance:`Frequency`, a new instance with the chosen seleciton is returned.
+        :returns: :instance:`Frequency`
+                a new instance with the chosen selection is returned.
         """
         if more:
             df = self.df[self.df['number 1'].between(*residues) & \
@@ -131,23 +145,43 @@ class Frequency:
 #              tick_length = 3, tick_width = 1):
         """Create a flareplot using the systems data.
 
-        :param cutoff: float, datapoints with a frequency below the cutoff threshold are not used
+        :param cutoff: float
+                datapoints with a frequency below the cutoff threshold are not used
                 for plotting.
-        :param cmap: str, colormap to use for the connecting lines. Standard matplotlib colormaps
+        :param cmap: str
+                colormap to use for the connecting lines. Standard matplotlib colormaps
                 are supported.
-            :default: "Greys", which is a colormap from white to black.
-        :param cbar: bool, wether a cbar should be added to the plot or not.
-            :default: True, which plots a colorbar
-        :param one_letter: bool, wether the default threeletter code labels should be converted to
-            oneletter code.
-        :param linewidth: int|float, base thickness of the connecting lines. The thickness gets also
-            scaled with the frequency.
-        :param fontsize: int|float, size of the labels font.
-        :param shift: int|float, is added to the angles, in degrees.
-        :param label_offset: int|float, amount the labels are offset from their baseposition. Should
+            :default: "Greys"
+                which is a colormap from white to black.
+        :param cbar: bool
+                wether a cbar should be added to the plot or not.
+            :default: True
+                which plots a colorbar
+        :param one_letter: bool
+                wether the default threeletter code labels should be converted to
+                oneletter code.
+            :default: True
+                threeletter code is converted to oneletter code.
+        :param linewidth: int|float
+                base thickness of the connecting lines. The thickness gets also
+                scaled with the frequency.
+            :default: 6
+        :param fontsize: int|float
+                size of the labels font.
+            :default: 10
+        :param shift: int|float
+                is added to the angles, in degrees.
+            :default: 0
+        :param label_offset: int|float
+                amount the labels are offset from their baseposition. Should
                 be chosen in a way, so the labels don't overlap with the plot.
-        :param tick_length: int|float, length of the ticks.
-        :param tick_width: int|float, width of the ticks.
+            :default: 0.2
+        :param tick_length: int|float
+                length of the ticks.
+            :default: 3
+        :param tick_width: int|float
+                width of the ticks.
+            :default: 1
         """
 
         defaults = _kw_handler( {
@@ -252,7 +286,7 @@ class Frequency:
 
     @property
     def interaction(self):
-        """What kind of interaction the data is about.
+        """:instance_attribtue: interaction the data is about.
 
         :returns: str
         """
@@ -260,7 +294,7 @@ class Frequency:
 
     @property
     def filename(self):
-        """The filename from which the data was read in.
+        """:instance_attribute: path to the file containing the data.
 
         :returns: str
         """
@@ -268,35 +302,41 @@ class Frequency:
 
     @property
     def selection(self):
-        """The selection applied to the original data.
+        """:instance_attribute: selection applied to the original data.
 
         :returns: tuple[tuple[int, int], tuple[int,int]]
         """
         return self._selection
 
     def info(self):
-        """Short description of the `Frequency`:instante:."""
+        """Short description of the `Frequency`:instance:."""
         print(f"System:\t\t\t{self.name}\n\
                 Interactiontype:\t{self.interaction}\n\
                 Frequencies from:\t{self.filename}")
 
     def compatible(self, other):
         """small check for compatibility
-        :param other: Frequency, `Frequency`:instance: to compare the current object to.
+        :param other: Frequency
+                `Frequency`:instance: to compare the current object to.
 
-        :returns: bool, True if the `Frequency.interaction`:instance_attribute: and the
-            `Frequency.selection`:instance_attribute: are the same else False."""
+        :returns: bool
+                True if the `Frequency.interaction`:instance_attribute: and the
+                `Frequency.selection`:instance_attribute: are the same else False.
+        """
 
         return self.interaction == other.interaction and self.selection == other.selection
 
     def __eq__(self, other):
         """check for equality.
 
-        :param other: Frequency, `Frequency`:instance: to compare the current object to.
+        :param other: Frequency
+                `Frequency`:instance: to compare the current object to.
 
-        :returns: bool, True if the `Frequency.interaction`:instance_attribute:, the
-            `Frequency.selection`:instance_attribute: and `Frequency.df.values`:instance_attribute:
-            are the same else False."""
+        :returns: bool
+                True if the `Frequency.interaction`:instance_attribute:, the
+                `Frequency.selection`:instance_attribute: and
+                `Frequency.df.values`:instance_attribute: are the same else False.
+        """
 
         return self.interaction == other.interaction and \
                 self.selection == other.selection and \
@@ -313,34 +353,48 @@ def heatmap(data: pd.DataFrame, *,
             y_size: float = 4, cmap: str = 'Greens', **kwargs):
     """Function to plot the heatmap of interactions.
 
-    The plotting is done using `seaborn.heatmap`. For further more thorough documentation check
-    their website. Below some possible keywords are elaborated. All keywords that are compatible
-    with `seaborn.heatmap` can be used.
+    The plotting is done using `seaborn.heatmap`. For further more thorough documentation check \
+their website. Below some possible keywords are elaborated. All keywords that are compatible \
+with `seaborn.heatmap` can be used.
 
-    :param data: pandas.DataFrame, data of merged DataFrame to be plotted.
-    :param title: Optional[str], title of the figure.
+    :param data: pandas.DataFrame
+            data of merged DataFrame to be plotted.
+    :param title: Optional[str]
+            title of the figure.
         :default: None
-    :param y_size: int|float, height of a single cell.
+    :param y_size: int|float
+            height of a single cell.
         :default: 4
-    :param cmap: str, colormap to use for the connecting lines. Standard matplotlib colormaps
+    :param cmap: str
+            colormap to use for the connecting lines. Standard matplotlib colormaps
             are supported.
-        :default: "Greens", which is a colormap from white to green.
-    :param cbar: bool, to display the colorbar belonging to the figure.
+        :default: "Greens"
+            colormap from white to green.
+    :param cbar: bool
+            to display the colorbar belonging to the figure.
         :default: True
-    :param vmin: float, low point for mapping the colors of :param cmap: to the cells values.
+    :param vmin: float
+            low point for mapping the colors of :param cmap: to the cells values.
         :default: 0
-    :param vmax: float, high point for mapping the colors of :param cmap: to the cells values.
+    :param vmax: float
+            high point for mapping the colors of :param cmap: to the cells values.
         :default: 1
-    :param annot: bool, to display the value inside the cells.
-        :default: False, which disables the display of the cell value.
-    :param linewidths: float, thickness of the lines inbetween the cells.
+    :param annot: bool
+            to display the value inside the cells.
+        :default: False
+            disables the display of the cell value.
+    :param linewidths: float
+            thickness of the lines inbetween individual cells.
         :default: 0.5
-    :param linecolor: str, color of the lines inbetween the cells.
+    :param linecolor: str
+            color of the lines inbetween individual cells.
         :default: "black"
 
-    :returns: matplotlib.figure, containing the heatmap
+    :returns: matplotlib.figure
+            containing the heatmap
 
-    :raises: pandas.errors.EmptyDataError, when the merged DataFrame is empty.
+    :raises: pandas.errors.EmptyDataError
+            when the merged DataFrame is empty.
     """
 
     kwargs = _kw_handler({
@@ -384,40 +438,56 @@ def fingerprint(data: pd.DataFrame,*,
                 y_size: float = 4, cmap: str = 'Greens', **kwargs):
     """Function to plot the fingerprint of interactions.
 
-    The plotting is done using `seaborn.clustermap`. For further more thorough documentation check
-    their website. Below some possible keywords are elaborated. All keywords that are compatible
-    with `seaborn.clustermap` can be used.
+    The plotting is done using `seaborn.clustermap`. For further more thorough documentation check \
+their website. Below some possible keywords are elaborated. All keywords that are compatible \
+with `seaborn.clustermap` can be used.
 
-    :param data: pandas.DataFrame, data of merged DataFrame to be plotted.
-    :param title: Optional[str], title of the figure.
+    :param data: pandas.DataFrame
+            data of merged DataFrame to be plotted.
+    :param title: Optional[str]
+            title of the figure.
         :default: None
-    :param y_size: int|float, height of a single cell.
+    :param y_size: int|float
+            height of a single cell.
         :default: 4
-    :param cmap: str, colormap to use for the connecting lines. Standard matplotlib colormaps
+    :param cmap: str
+            colormap to use for the connecting lines. Standard matplotlib colormaps
             are supported.
-        :default: "Greens", which is a colormap from white to green.
-    :param cbar_pos: tuple[float, float, float, float], tuple of (left, bottom, width, heigth),
-            controls the position of the colorbar in the figure
+        :default: "Greens"
+            colormap from white to green.
+    :param cbar_pos: tuple[float, float, float, float]
+            tuple of (left, bottom, width, heigth), controls the position of the
+            colorbar in the figure
         :default: (1.5, 0.05, 0.1, 0.38)
-    :param vmin: float, low point for mapping the colors of :param cmap: to the cells values.
+    :param vmin: float
+            low point for mapping the colors of :param cmap: to the cells values.
         :default: 0
-    :param vmax: float, high point for mapping the colors of :param cmap: to the cells values.
+    :param vmax: float
+            high point for mapping the colors of :param cmap: to the cells values.
         :default: 1
-    :param annot: bool, to display the value inside the cells.
-        :default: False, which disables the display of the cell value.
-    :param linewidths: float, thickness of the lines inbetween the cells.
+    :param annot: bool
+            to display the value inside the cells.
+        :default: False
+            disables the display of the cell value.
+    :param linewidths: float
+            thickness of the lines inbetween individual cells.
         :default: 0.5
-    :param linecolor: str, color of the lines inbetween the cells.
+    :param linecolor: str
+            color of the lines inbetween individual cells.
         :default: "black"
-    :param dendrogram_ratio: float|tuple[float, float], Proportion of the figure size devoted to
-            the dendrogram lines
+    :param dendrogram_ratio: float|tuple[float, float]
+            proportion of the figure size devoted to the dendrogram lines
         :default: (0.2, 0)
-    :param col_cluster: bool, controls the clustering of the columns.
-        :default: False, which disables the clustering of the columns.
+    :param col_cluster: bool
+            controls the clustering of the columns.
+        :default: False
+            disables the clustering of the columns.
 
-    :returns: matplotlib.figure, containing the fingerprint
+    :returns: matplotlib.figure
+            containing the fingerprint
 
-    :raises: pandas.errors.EmptyDataError, when the merged DataFrame is empty.
+    :raises: pandas.errors.EmptyDataError
+            when the merged DataFrame is empty.
     """
     kwargs = _kw_handler({
         'cbar_pos' : (1.5, 0.05, 0.1, 0.38),
@@ -522,3 +592,7 @@ three2one = {
         'TYR' : 'Y',
         'MET' : 'M'
     }
+
+if __name__ == '__main__':
+    import sys
+    sys.exit()

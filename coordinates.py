@@ -55,8 +55,10 @@ class Polar(Coordinate):
     The class contains one method :func:`convert`, which allows to conversion
     to cartesian coordinates and returns a :class:`Cartesian` object.
 
-        :param theta: float, the angle in radians.
-        :param r: float, the distance from the origin to the point, the radius.
+        :param theta: float
+                the angle in radians.
+        :param r: float
+                the distance from the origin to the point, the radius.
     """
     theta: float
     r: float
@@ -85,24 +87,33 @@ def bezier(starting_point: Coordinate, end_point: Coordinate,
             origin: Coordinate = Cartesian(0,0), n_points: int = 50):
     """Calculates a bezier curve connecting three points.
 
-        :param starting_point: Cartesian|Polar, start point of the bezier curve.
-        :param end_point: Cartesian|Polar, end point of the bezier curve.
-        :param origin: Cartesian|Polar, middle point for the bezier curve.
-            default: Cartesian(0,0), which sets zero as origin.
-        :param n_points: int, number of points on the bezier curve to calculate.
+        :param starting_point: Coordinate
+                start point of the bezier curve.
+        :param end_point: Coordinate
+                end point of the bezier curve.
+        :param origin: Coordinate
+                middle point for the bezier curve.
+            default: Cartesian(0,0)
+                sets zero as origin.
+        :param n_points: int
+                number of points on the bezier curve to calculate.
             default: 50
 
-        :return: list[Cartesian], list of :class:`Cartesian` points.
+        :return: list[Cartesian]
+                list of :class:`Cartesian` points.
+
+        :raises: ValueError
+                if not all arguments are Coordinate objects.
     """
 
+    if not all(map(lambda x: isinstance(x, Coordinate), (starting_point,end_point,origin))):
+        raise ValueError("Arguments need to be a Coordinate-Object")
     if isinstance(starting_point, Polar):
         starting_point = starting_point.convert()
     if isinstance(end_point, Polar):
         end_point = end_point.convert()
     if isinstance(origin, Polar):
         origin = origin.convert()
-    if not all(map(lambda x: isinstance(x, Cartesian), (starting_point,end_point,origin))):
-        raise ValueError("Arguments need to be a Coordinate-Object")
 
     bezier_curve = [Cartesian(
             *((1-t) * ( (1-t) * starting_point.values + t * origin.values ) + \
