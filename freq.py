@@ -20,8 +20,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 #for flare
-import coordinates as coord
-
+from . import coordinates as coord
 
 class Frequency:
     """Container for the data loaded from a Frequency-file calculated with GetContacts.
