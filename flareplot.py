@@ -3,7 +3,7 @@ from itertools import chain
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from coordinates import bezier, Polar, Cartesian
+from .coordinates import bezier, Polar, Cartesian
 
 class MarkupStrategy(ABC):
     def __init__(self, gap_scale=0.3):
@@ -229,12 +229,12 @@ if __name__ == "__main__":
         "light chain" : ("steelblue", [36, 118]),
         "heavy chain" : ("lightgray", [254, 348]),
         },
-        strategy_name = "range",
+        strategy_name = "individual",
         gap_scale=0.1,
         )
 
     flare.ax.set_title("wildtype", pad=40)
-    flare.fig.legend(loc="upper left")
+#    flare.fig.legend(loc="upper left")
 
     plt.show()
 

@@ -1,9 +1,11 @@
 from abc import ABC, abstractmethod
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
 
+from .utils import _kw_handler, mask_gen, max_extent
 
 class MatrixPlot(ABC):
     def __init__(self, data, fig=None, ax=None, **kwargs):
@@ -13,12 +15,15 @@ class MatrixPlot(ABC):
         
         self.fig = fig
         self.ax = ax
+        
+        self.label_data = None
+        self.is_split = False
 
     @abstractmethod
     def plot(self, cmap, **kwargs):
         pass
     
-    def recolor(self, cmaps, masker):
+    def recolor_matrix(self, cmaps, masker):
         mesh = self.ax.collections[0]
         data = mesh.get_array().data
 
@@ -29,9 +34,115 @@ class MatrixPlot(ABC):
 
         mesh.set_array(None)
         mesh.set_facecolor(fc)
-    
 
-class Heatmap(MatrixPlot):
+    def split_labels(self):
+        if not self.label_data:
+            self._labeler()
+        if not self.is_split:
+            labels, _, shifts = zip(*[v.values() for v in self.label_data.values()])
+            ticks = list(self.label_data.keys())
+
+            self.ax.set_yticks(ticks, labels)
+
+            self.is_split = True
+
+    def align_labels(self, *, factor=None):
+        if factor is not None:
+            self.factor = factor
+
+        _, _, shifts = zip(*[v.values() for v in self.label_data.values()])
+        extent = max_extent(self.ax)
+
+        for label, shift in zip(self.ax.get_yticklabels(), shifts):
+            pos = label.get_position()
+            label.set_position(
+                    (self.label_position + self.factor*shift*extent, pos[1])
+                    )
+        return self.ax
+
+    def color_labels(self, colors, alpha = 0.5):
+        if not self.is_split:
+            self.split_labels()
+
+        _, systems, _ = zip(*[v.values() for v in self.label_data.values()])
+
+        if isinstance(colors, str):
+            colors = [colors]
+        # there are always 2 systems due to - or / being system 0
+        while len(colors) < len(set(systems))-1:
+            # "none" equals no color, regular None colors blue somehow
+            colors.append("none")
+
+        for label, system in zip(self.ax.get_yticklabels(), systems):
+            if system:
+                label.set_bbox(
+                        dict(
+                            facecolor=colors[system - 1],
+                            alpha= alpha,
+                            edgecolor="none",
+                            )
+                        )
+    
+    def _labeler(self):
+        label_data = dict()
+        for label in self.ax.get_yticklabels():
+            _, height = label.get_position()
+            split = label.get_text().split('-')
+
+            left = split[::2]
+            right = split[1::2]
+            
+            if len(set(left)) == 1:
+                left = set(left)
+            if len(set(right)) == 1:
+                right = set(right)
+                
+            # left = '§/§'.join(left).split('§')
+            # right = '§/§'.join(right).split('§')
+            
+            for system, (pos, l) in enumerate(enumerate(left), start=1):
+                label_data[height + 1e-10*pos] = {
+                    'text' : l,
+                    'system' : system,
+                    'pos' : pos,
+                }
+                if system > 1:
+                    label_data[height+1e-10*pos+1e-11] = {
+                        'text' : ' / ',
+                        'system' : 0,
+                        'pos' : pos + 0.95,
+                    }
+            
+            label_data[height+1e-10*(pos+0.5)] = {
+                    'text' : ' - ',
+                    'system' : 0,
+                    'pos' : pos + 1.1,
+                }
+            
+            for system, (pos, r) in enumerate(enumerate(right, start=pos+1), start=1):
+                pos += 0.5
+                label_data[height + 1e-10*pos] = {
+                    'text' : r,
+                    'system' : system,
+                    'pos' : pos,
+                }
+                if system > 1:
+                    label_data[height+1e-10*pos+1e-11] = {
+                        'text' : ' / ',
+                        'system' : 0,
+                        'pos' : pos + 0.95,
+                    }
+
+        self.label_data = label_data                       
+        return label_data
+
+
+class Heatmapper(MatrixPlot):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.factor = -0.5
+        self.label_position = 0
+
     def plot(self, cmap: str = "Greens", **kwargs):
         kwargs = _kw_handler({
             'cbar' : True,
@@ -61,7 +172,12 @@ class Heatmap(MatrixPlot):
         self.ax.set_yticklabels(self.ax.get_yticklabels(), rotation=0)
 
 
-class Fingerprint(MatrixPlot):
+class Fingerprinter(MatrixPlot):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.factor = 1
+        self.label_position = 1
+
     def plot(self, cmap:str = "Greens", cbar:bool=False, **kwargs):
         kwargs = _kw_handler({
             'cbar_pos' : (1.5, 0.05, 0.1, 0.38),
@@ -98,43 +214,21 @@ class Fingerprint(MatrixPlot):
         self.fig.axes[3].set_visible(draw)
     
 
+def fingerprint(data, *args, **kwargs):
+    finger = Fingerprinter(data)
+    finger.plot(*args, **kwargs)
+    finger.split_labels()
+    finger.align_labels()
 
-def mask_gen(*args: int):
-    """Returns an infinite sequence that enumerates the elements provided and repeats the enumerated value as many time as specified.
-    
-    Example:
-    >>> for i in mask_gen(1,2):
-            print(i)
-    0
-    1
-    1
-    0
-    1
-    ...
-    """
-    
-    while True:
-        for n, a in enumerate(args):
-            for _ in range(a):
-                yield n
+    return finger
 
-def _kw_handler(defaults: dict, kwargs:dict, error: bool = False):
-    """updates a default dictionary with the kwargs dictionary.
+def heatmap(data, *args, **kwargs):
+    heat = Heatmapper(data)
+    heat.plot(*args, **kwargs)
+    heat.split_labels()
+    heat.align_labels()
 
-    :param defaults: dict, containing the default variable names and values.
-    :param kwargs: dict, dictionary containing the variable names and values from the function call
-
-    :returns: dict, updated defaults dictionary
-
-    :raises: KeyError, if `kwargs` contains a key that `defaults` does not.
-    """
-    defaults = defaults.copy()
-    if error:
-        for key in kwargs:
-            if not key in defaults:
-                raise KeyError(f"{key} not defined")
-    defaults.update(kwargs)
-    return defaults
+    return heat
 
 if __name__ == "__main__":
     data = np.array(
@@ -159,7 +253,7 @@ if __name__ == "__main__":
 #     hm = Heatmap(df)
 #     hm.plot()
 
-    p = Fingerprint(df)
+    p = Fingerprinter(df)
     p.plot()
     p.recolor(["Greens", "Blues"], mask_gen(1,1))
     plt.show()
