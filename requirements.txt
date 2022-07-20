@@ -1,0 +1,9 @@
+astunparse==1.6.3
+mdtraj==1.9.7
+numpy==1.23.1
+pandas==1.4.3
+pyparsing==3.0.9
+python-dateutil==2.8.2
+pytz==2022.1
+scipy==1.8.1
+six==1.16.0

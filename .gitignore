@@ -5,3 +5,4 @@ Frequency-Anleitung.ipynb
 __pycache__
 *.swp
 .coverage
+venv/
