@@ -39,7 +39,7 @@ class MatrixPlot(ABC):
         if not self.label_data:
             self._labeler()
         if not self.is_split:
-            labels, _, shifts = zip(*[v.values() for v in self.label_data.values()])
+            labels, _, _ = zip(*[v.values() for v in self.label_data.values()])
             ticks = list(self.label_data.keys())
 
             self.ax.set_yticks(ticks, labels)
@@ -52,7 +52,7 @@ class MatrixPlot(ABC):
 
         _, _, shifts = zip(*[v.values() for v in self.label_data.values()])
         extent = max_extent(self.ax)
-
+        
         for label, shift in zip(self.ax.get_yticklabels(), shifts):
             pos = label.get_position()
             label.set_position(
@@ -89,6 +89,9 @@ class MatrixPlot(ABC):
         self.fig.set_size_inches(self.fig.get_size_inches()*scale)
     
     def _labeler(self):
+        n_systems_left = max(
+                [len(set(label.get_text().split('-')[::2])) for label in self.ax.get_yticklabels()]
+                )
         label_data = dict()
         for label in self.ax.get_yticklabels():
             _, height = label.get_position()
@@ -101,42 +104,39 @@ class MatrixPlot(ABC):
                 left = set(left)
             if len(set(right)) == 1:
                 right = set(right)
-                
-            # left = '§/§'.join(left).split('§')
-            # right = '§/§'.join(right).split('§')
             
             for system, (pos, l) in enumerate(enumerate(left), start=1):
+                if system > 1:
+                    label_data[height+1e-10*pos+1e-11] = {
+                        'text' : ' / ',
+                        'system' : 0,
+                        'pos' : pos - 0.2,
+                    }
                 label_data[height + 1e-10*pos] = {
                     'text' : l,
                     'system' : system,
                     'pos' : pos,
                 }
+            pos = n_systems_left
+            label_data[height+1e-10*(pos+0.5)] = {
+                    'text' : ' - ',
+                    'system' : 0,
+                    'pos' : pos-0.1,
+                }
+            
+            for system, (pos, r) in enumerate(enumerate(right, start=pos), start=1):
+                pos += 0.2
                 if system > 1:
                     label_data[height+1e-10*pos+1e-11] = {
                         'text' : ' / ',
                         'system' : 0,
-                        'pos' : pos + 0.95,
+                        'pos' : pos - 0.2,
                     }
-            
-            label_data[height+1e-10*(pos+0.5)] = {
-                    'text' : ' - ',
-                    'system' : 0,
-                    'pos' : pos + 1.1,
-                }
-            
-            for system, (pos, r) in enumerate(enumerate(right, start=pos+1), start=1):
-                pos += 0.5
                 label_data[height + 1e-10*pos] = {
                     'text' : r,
                     'system' : system,
                     'pos' : pos,
                 }
-                if system > 1:
-                    label_data[height+1e-10*pos+1e-11] = {
-                        'text' : ' / ',
-                        'system' : 0,
-                        'pos' : pos + 0.95,
-                    }
 
         self.label_data = label_data                       
         return label_data
