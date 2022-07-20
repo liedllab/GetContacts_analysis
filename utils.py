@@ -1,5 +1,6 @@
 from functools import reduce
 import mdtraj as md
+import numpy as np
 import pandas as pd
 
 
@@ -40,7 +41,6 @@ def mask_gen(*args: int):
             for _ in range(a):
                 yield n
 
-
 def max_extent(ax):
     widths = list()
     for label in ax.get_yticklabels():
@@ -48,6 +48,16 @@ def max_extent(ax):
         width = bb.transformed(ax.transData.inverted()).width
         widths.append(width)
     return max(widths)
+
+def sort_index(df, *, inplace=False):
+    if not inplace:
+        df = df.copy()
+
+    df.index = pd.MultiIndex.from_arrays(
+            np.array([sorted(pair) for pair in df.index]).T
+            )
+    return df
+
 
 def sequencer(*paths, start:int = 1) -> pd.DataFrame:
     dfs = list()

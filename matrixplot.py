@@ -82,6 +82,11 @@ class MatrixPlot(ABC):
                             edgecolor="none",
                             )
                         )
+
+    def _norm_fig_size(self, norm=100):
+        bb = self.ax.get_window_extent()
+        scale = self.data.columns.shape[0] * norm / bb.width
+        self.fig.set_size_inches(self.fig.get_size_inches()*scale)
     
     def _labeler(self):
         label_data = dict()
@@ -219,6 +224,7 @@ def fingerprint(data, *args, **kwargs):
     finger.plot(*args, **kwargs)
     finger.split_labels()
     finger.align_labels()
+    finger._norm_fig_size()
 
     return finger
 
@@ -227,6 +233,7 @@ def heatmap(data, *args, **kwargs):
     heat.plot(*args, **kwargs)
     heat.split_labels()
     heat.align_labels()
+    heat._norm_fig_size()
 
     return heat
 
