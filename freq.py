@@ -526,37 +526,6 @@ with `seaborn.clustermap` can be used.
     return finger
 
 
-def _resize(sequence, target=5):
-    """Resizes all elements of sequence, so that the target value is the lowest.
-
-    This function is mainly used for resizing figsizes.
-
-    :param sequence: list[float|int], list that contains the elements to be resized.
-    :param target: int|float, lowest value in the output.
-
-    :returns: list[int|float], resized in a way that the lowest value equals the target value.
-        """
-    smallest = min(sequence)
-    return [i/smallest*target for i in sequence]
-
-def _kw_handler(defaults: dict, kwargs:dict, error: bool = False):
-    """updates a default dictionary with the kwargs dictionary.
-
-    :param defaults: dict, containing the default variable names and values.
-    :param kwargs: dict, dictionary containing the variable names and values from the function call
-
-    :returns: dict, updated defaults dictionary
-
-    :raises: KeyError, if `kwargs` contains a key that `defaults` does not.
-    """
-    defaults = defaults.copy()
-    if error:
-        for key in kwargs:
-            if not key in defaults:
-                raise KeyError(f"{key} not defined")
-    defaults.update(kwargs)
-    return defaults
-
 three2one = {
         'CYS' : 'C',
         'CYX' : 'C',
