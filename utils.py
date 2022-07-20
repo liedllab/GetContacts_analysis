@@ -1,4 +1,6 @@
-from functools import reduce
+from functools import reduce, partial
+from collection import deque
+from typing import Iterable
 import mdtraj as md
 import numpy as np
 import pandas as pd
@@ -57,6 +59,49 @@ def sort_index(df, *, inplace=False):
             np.array([sorted(pair) for pair in df.index]).T
             )
     return df
+
+def read_tsv(path):
+    df = pd.read_csv(path, sep=r'\t|:', skiprows=2, header=None, engine='python')
+    df = df.drop(labels=[0,3], axis=1)
+    df.columns = ["res 1", "number 1", "res 2", "number 2", "frequency"]
+    return df
+
+def merge_on_number(dfs: list[pd.DataFrame]) -> pd.DataFrame:
+    prepared_dfs = [(df.drop(labels=["res 1", "res 2"], axis=1)
+                        .set_index(keys=["number 1", "number 2"])) for df in dfs]
+    concat = pd.concat(
+            prepared_dfs,
+            keys=range(len(prepared_dfs)),
+            )
+    merged = (concat.unstack(level=-3, fill_value=0)
+                    .droplevel(0, axis=1)
+                    .sort_index())
+    return merged
+
+def _selector(exclusive: bool, df: pd.DataFrame, selection: Iterable) -> pd.DataFrame:
+
+    bool_df = (df.select_dtypes(int)
+                .isin(selection))
+    if exclusive:
+        return df[bool_df.nunique(axis=1) == 2]
+    else:
+        return df[bool_df.any(axis=1)]
+    
+def select(df: pd.DataFrame, 
+            selection: Iterable, 
+            exclusive: bool =True, 
+            kind: str = "range",
+            ) -> pd.DataFrame:
+
+    sel_function = {
+            "range" : lambda x: range(*x),
+            "selection" : lambda x: x,
+            }
+    selection = deque(map(sel_function[kind], selection))
+    selection.appendleft(df)
+
+    par_selector = partial(_selector, exclusive)
+    return reduce(par_selector, selection)
 
 
 def sequencer(*paths, start:int = 1) -> pd.DataFrame:
