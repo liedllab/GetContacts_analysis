@@ -56,6 +56,34 @@ def sequencer(*paths, start:int = 1) -> pd.DataFrame:
         sequence.index += start - sequence.index[0]
     return sequence
 
+def label_merged(df: pd.DataFrame, sequences: pd.DataFrame, inplace: bool=False) -> pd.DataFrame:
+    if not inplace:
+        df = df.copy()
+
+    df.index = pd.MultiIndex.from_arrays(
+            np.array([ind_pair * sequences.ndim for ind_pair in df.index.to_list()]).T,
+            names = np.repeat(sequences.columns, sequences.ndim),
+            )
+
+    for n, (name, col) in enumerate(sequences.iteritems()):
+        df = (df.rename(col.to_dict(), level=n*2)
+                .rename(col.to_dict(), level=1+n*2))
+
+    return df
+
+def select_system(df: pd.DataFrame, name: str, inplace: bool=False) -> pd.DataFrame:
+    if not inplace:
+        df = df.copy()
+
+    df = df.droplevel(
+            list(np.argwhere(~np.array(
+                [ind_name == name for ind_name in df.index.names]
+                )).reshape(-1))
+            )
+    df = df.loc[:, name]
+
+    return df
+
 def mask_gen(*args: int):
     """Returns an infinite sequence that enumerates the elements provided and repeats the enumerated value as many time as specified.
     
@@ -91,6 +119,14 @@ def max_extent(ax):
         width = bb.transformed(ax.transData.inverted()).width
         widths.append(width)
     return max(widths)
+
+
+def closest(val, arr, lower=True):
+    if lower:
+        return arr[arr-val >= 0][0]
+    else:
+        return arr[arr-val <= 0][-1]
+
 
 def _kw_handler(defaults: dict, kwargs:dict, error: bool = False):
     """updates a default dictionary with the kwargs dictionary.
