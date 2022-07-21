@@ -223,9 +223,8 @@ def fingerprint(data, *args, **kwargs):
     finger = Fingerprinter(data)
     finger.plot(*args, **kwargs)
     finger.split_labels()
-    finger.align_labels()
     finger._norm_fig_size()
-
+    finger.align_labels(factor=2)
     return finger
 
 def heatmap(data, *args, **kwargs):
