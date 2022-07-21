@@ -16,10 +16,11 @@ def select(df: pd.DataFrame,
             selection: Iterable, 
             exclusive: bool =True, 
             kind: str = "range",
+            include_end = True,
             ) -> pd.DataFrame:
 
     sel_function = {
-            "range" : lambda x: range(*x),
+            "range" : lambda x: range(x[0], x[-1]+include_end),
             "selection" : lambda x: x,
             }
     selection = deque(map(sel_function[kind], selection))
