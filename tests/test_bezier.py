@@ -1,7 +1,6 @@
 import pytest
 
-from GetContacts_analysis.coordinates import bezier
-from GetContacts_analysis.coordinates import Polar, Cartesian
+from gc_analysis.coordinates import bezier, Polar, Cartesian
 
 def test_bezier_len() -> None:
     n = 50

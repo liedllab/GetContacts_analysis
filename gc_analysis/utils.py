@@ -1,5 +1,5 @@
 from functools import reduce, partial
-from collection import deque
+from collections import deque
 from typing import Iterable
 import mdtraj as md
 import numpy as np
@@ -118,4 +118,5 @@ def _selector(exclusive: bool, df: pd.DataFrame, selection: Iterable) -> pd.Data
     else:
         return df[bool_df.any(axis=1)]
     
-
+if __name__ == '__main__':
+    exit()

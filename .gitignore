@@ -4,5 +4,12 @@ Frequency-Anleitung.ipynb
 .ipynb_checkpoints
 __pycache__
 *.swp
+
+# packaging
+build/
+dist/
+*.egg-info
+
+# development
 .coverage
 venv/

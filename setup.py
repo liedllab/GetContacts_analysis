@@ -14,9 +14,10 @@ setup(
         packages=find_packages(),
         install_requires=[
             "matplotlib",
-            "seaborn",
-            "pandas",
+            "mdtraj",
             "numpy",
+            "pandas",
+            "seaborn",
             ],
 
         keywords=["python", "GetContacts", "fingerprint", "flareplot"],

@@ -2,7 +2,7 @@
 
 import pytest
 import numpy as np
-from GetContacts_analysis.coordinates import Cartesian, Polar
+from gc_analysis.coordinates import Cartesian, Polar
 
 def test_cartesian_values() -> None:
     x, y = 0, 0

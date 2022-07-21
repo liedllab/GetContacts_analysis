@@ -262,5 +262,5 @@ if __name__ == "__main__":
 
     p = Fingerprinter(df)
     p.plot()
-    p.recolor(["Greens", "Blues"], mask_gen(1,1))
+    p.recolor_matrix(["Greens", "Blues"], mask_gen(1,1))
     plt.show()

@@ -21,6 +21,7 @@ import seaborn as sns
 
 #for flare
 from . import coordinates as coord
+from .utils import _kw_handler
 
 class Frequency:
     """Container for the data loaded from a Frequency-file calculated with GetContacts.
