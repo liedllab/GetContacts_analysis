@@ -18,6 +18,7 @@ class MatrixPlot(ABC):
         
         self.label_data = None
         self.is_split = False
+        self._mesh_data = None
 
     @abstractmethod
     def plot(self, cmap, **kwargs):
@@ -25,11 +26,13 @@ class MatrixPlot(ABC):
     
     def recolor_matrix(self, cmaps, masker):
         mesh = self.ax.collections[0]
-        data = mesh.get_array().data
+        
+        if self._mesh_data is None:
+            self._mesh_data = mesh.get_array().data
 
         cmaps = [plt.cm.get_cmap(name, 256) for name in cmaps]
         fc = mesh.get_facecolors()
-        for n, (mask, value) in enumerate(zip(masker, data)):
+        for n, (mask, value) in enumerate(zip(masker, self._mesh_data)):
             fc[n] = cmaps[mask](value)
 
         mesh.set_array(None)
