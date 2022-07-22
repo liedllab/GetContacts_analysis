@@ -21,7 +21,7 @@ class MatrixPlot(ABC):
         self._mesh_data = None
 
     @abstractmethod
-    def plot(self, cmap, **kwargs):
+    def plot(self,*, cmap, **kwargs):
         pass
     
     def recolor_matrix(self, cmaps, masker):
@@ -151,7 +151,7 @@ class Heatmapper(MatrixPlot):
         self.factor = -0.5
         self.label_position = 0
 
-    def plot(self, cmap: str = "Greens", **kwargs):
+    def plot(self, *, cmap: str = "Greens", **kwargs):
         kwargs = _kw_handler({
             'cbar' : True,
             'vmin' : 0,
@@ -186,7 +186,7 @@ class Fingerprinter(MatrixPlot):
         self.factor = 1
         self.label_position = 1
 
-    def plot(self, cmap:str = "Greens", cbar:bool=False, **kwargs):
+    def plot(self, *, cmap:str = "Greens", cbar:bool=False, **kwargs):
         kwargs = _kw_handler({
             'cbar_pos' : (1.5, 0.05, 0.1, 0.38),
             'vmin' : 0,
@@ -222,7 +222,56 @@ class Fingerprinter(MatrixPlot):
         self.fig.axes[3].set_visible(draw)
     
 
-def fingerprint(data, *args, **kwargs):
+def fingerprint(data: pd.DataFrame, *args, **kwargs):
+    """ Wrapper around the Fingerprinter class.
+
+The plotting is done using `seaborn.clustermap`. For further more
+thorough documentation check their website. Below some possible 
+keywords are elaborated. All keywords that are compatible with 
+`seaborn.clustermap` can be used.
+
+:param data: pandas.DataFrame
+        data of merged DataFrame to be plotted.
+:param cmap: str
+        colormap to use for the connecting lines. Standard 
+        matplotlib colormaps are supported.
+    :default: "Greens"
+        colormap from white to green.
+:param cbar_pos: tuple[float, float, float, float]
+        tuple of (left, bottom, width, heigth), controls the 
+        position of the colorbar in the figure
+    :default: (1.5, 0.05, 0.1, 0.38)
+:param vmin: float
+        low point for mapping the colors of :param cmap: to the 
+        cells values.
+    :default: 0
+:param vmax: float
+        high point for mapping the colors of :param cmap: to the 
+        cells values.
+    :default: 1
+:param annot: bool
+        to display the value inside the cells.
+    :default: False
+        disables the display of the cell value.
+:param linewidths: float
+        thickness of the lines inbetween individual cells.
+    :default: 0.5
+:param linecolor: str
+        color of the lines inbetween individual cells.
+    :default: "black"
+:param dendrogram_ratio: float|tuple[float, float]
+        proportion of the figure size devoted to the dendrogram 
+        lines
+    :default: (0.2, 0)
+:param col_cluster: bool
+        controls the clustering of the columns.
+    :default: False
+        disables the clustering of the columns.
+
+:returns: Fingerprinter
+
+:raises: pandas.errors.EmptyDataError
+    """
     finger = Fingerprinter(data)
     finger.plot(*args, **kwargs)
     finger.split_labels()
@@ -230,7 +279,51 @@ def fingerprint(data, *args, **kwargs):
     finger.align_labels(factor=2)
     return finger
 
+
 def heatmap(data, *args, **kwargs):
+    """ Wrapper around the Heatmapper class.
+
+The plotting is done using `seaborn.heatmap`. For further more 
+thorough documentation check their website. Below some possible 
+keywords are elaborated. All keywords that are compatible with 
+`seaborn.heatmap` can be used.
+
+:param data: pandas.DataFrame
+        data of merged DataFrame to be plotted.
+:param cmap: str
+        colormap to use for the connecting lines. Standard 
+        matplotlib colormaps
+        are supported.
+    :default: "Greens"
+        colormap from white to green.
+:param cbar: bool
+        to display the colorbar belonging to the figure.
+    :default: True
+:param vmin: float
+        low point for mapping the colors of :param cmap: to the 
+        cells values.
+    :default: 0
+:param vmax: float
+        high point for mapping the colors of :param cmap: to the 
+        cells values.
+    :default: 1
+:param annot: bool
+        to display the value inside the cells.
+    :default: False
+        disables the display of the cell value.
+:param linewidths: float
+        thickness of the lines inbetween individual cells.
+    :default: 0.5
+:param linecolor: str
+        color of the lines inbetween individual cells.
+    :default: "black"
+
+:returns: matplotlib.figure
+        containing the heatmap
+
+:raises: pandas.errors.EmptyDataError
+        when the merged DataFrame is empty.
+    """
     heat = Heatmapper(data)
     heat.plot(*args, **kwargs)
     heat.split_labels()
@@ -238,6 +331,7 @@ def heatmap(data, *args, **kwargs):
     heat._norm_fig_size()
 
     return heat
+
 
 if __name__ == "__main__":
     data = np.array(

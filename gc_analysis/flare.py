@@ -106,7 +106,33 @@ class Flareplotter:
         self.highlighted = list()
 
     
-    def plot(self, cmap: str = "Greys", vmin=0, vmax=1, cbar=True):
+    def plot(self, *, cmap: str = "Greys", cbar: bool=True, 
+            vmin: float=0, vmax: float=1, linewidths: float=1.5):
+        """
+:param data: pandas.DataFrame
+        data of merged DataFrame to be plotted.
+:param cmap: str
+        colormap to use for the connecting lines. Standard matplotlib colormaps
+        are supported.
+    :default: "Greys"
+        which is a colormap from white to black.
+:param cbar: bool
+        wether a cbar should be added to the plot or not.
+    :default: True
+        which plots a colorbar
+:param vmin: float
+        low point for mapping the colors of :param cmap: to the 
+        cells values.
+    :default: 0
+:param vmax: float
+        high point for mapping the colors of :param cmap: to the 
+        cells values.
+    :default: 1
+:param linewidth: int|float
+        base thickness of the connecting lines. The thickness gets also
+        scaled with the frequency.
+    :default: 6
+        """
         self.ax.set_theta_zero_location("E", offset=0)
         self.ax.grid(False)
         
@@ -135,7 +161,7 @@ class Flareplotter:
             self.ax.plot(
                     *curve_points.T,
                     color=sm_cmap.get_cmap()(value),
-                    lw=(1.5+value)**2,
+                    lw=(linewidths+value)**2,
                     zorder=10-10*(1-value),
                     )
             self.ax.spines['polar'].set_visible(True)
@@ -254,9 +280,37 @@ class Flareplotter:
     def __repr__(self):
         return self.fig
 
-def flareplot(data):
+
+def flareplot(data, *, cmap="Greys", **kwargs):
+    """Wrapper around Flareplotter class.
+
+:param data: pandas.DataFrame
+        data of merged DataFrame to be plotted.
+:param cmap: str
+        colormap to use for the connecting lines. Standard matplotlib colormaps
+        are supported.
+    :default: "Greys"
+        which is a colormap from white to black.
+:param cbar: bool
+        wether a cbar should be added to the plot or not.
+    :default: True
+        which plots a colorbar
+:param vmin: float
+        low point for mapping the colors of :param cmap: to the 
+        cells values.
+    :default: 0
+:param vmax: float
+        high point for mapping the colors of :param cmap: to the 
+        cells values.
+    :default: 1
+:param linewidth: int|float
+        base thickness of the connecting lines. The thickness gets also
+        scaled with the frequency.
+    :default: 6
+    """
+
     flare = Flareplotter(data)
-    flare.plot()
+    flare.plot(cmap=cmap, **kwargs)
     flare.rotate_labels()
     return flare
 
