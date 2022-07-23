@@ -14,8 +14,11 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import .coordinates
+
+from .coordinates import Polar, bezier
 from .utils import _kw_handler, three2one
+
+
 
 class Frequency:
     """Container for the data loaded from a Frequency-file calculated with GetContacts.
@@ -97,6 +100,7 @@ class Frequency:
 
         :raises: pandas.errors.EmptyDataError as a warning.
         """
+        warnings.warn("Please consider using `read_tsv` instead.")
         try:
             df = pd.read_csv(filename, sep=r'\t|:', skiprows=2, header=None, engine='python')
         except pd.errors.EmptyDataError:
@@ -120,6 +124,7 @@ class Frequency:
         :returns: :instance:`Frequency`
                 a new instance with the chosen selection is returned.
         """
+        warnings.warn("Please consider using `select` instead.")
         if more:
             df = self.df[self.df['number 1'].between(*residues) & \
                     self.df['number 2'].between(*more) | \
@@ -177,6 +182,7 @@ class Frequency:
                 width of the ticks.
             :default: 1
         """
+        warnings.warn("Please consider using `flareplot` instead.")
 
         defaults = _kw_handler( {
             'linewidth' : 6,
@@ -197,7 +203,7 @@ class Frequency:
         all_unique_labels = sorted(set(zip(*zip(*all_labels))))
         # create a point for each label between which the connecting bezier
         # curve is drawn
-        points = {num: coordinates.Polar(r=1, theta= angle)
+        points = {num: Polar(r=1, theta= angle)
                   for (num,_), angle in zip(all_unique_labels,
                                             np.linspace(0, 2*np.pi,
                                                 len(all_unique_labels), endpoint=False)
@@ -219,7 +225,7 @@ class Frequency:
         for i in cut.index:
             ax.plot(
                 *np.array(
-                    [b.convert().values for b in coordinates.bezier(
+                    [b.convert().values for b in bezier(
                         points[cut.loc[i, 'number 1']],
                         points[cut.loc[i, 'number 2']]
                     )]).T,
@@ -340,6 +346,7 @@ class Frequency:
     def __repr__(self):
         "returns the `pandas.DataFrame.__repr__()` of the `Frequency.df`:instance_attribute:."
         return f"{self.df.__repr__()}"
+
 
 if __name__ == '__main__':
     sys.exit()
