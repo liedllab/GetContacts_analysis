@@ -3,25 +3,19 @@
 """Main module containing the :class:`Frequency` which is a container for handeling the \
 tsv-datafile.
 
-:class:`Frequency` currently depends on `coordinates.py` to utilize the :method:`Frequency.flare`.
-
-The two plotting functions :func:`fingerprint` and :func:`heatmap` are available to \
-visualize the data and do not depend on `coordinates.py`.
+:class:`Frequency` depends on `coordinates.py` to utilize the :method:`Frequency.flare`.
 """
+from __future__ import annotations
 
 from typing import Optional, Tuple
 import warnings
-
-import pandas as pd
-import numpy as np
-
+import sys
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-import seaborn as sns
-
-#for flare
-from . import coordinates as coord
-from .utils import _kw_handler
+import numpy as np
+import pandas as pd
+import .coordinates
+from .utils import _kw_handler, three2one
 
 class Frequency:
     """Container for the data loaded from a Frequency-file calculated with GetContacts.
@@ -203,7 +197,7 @@ class Frequency:
         all_unique_labels = sorted(set(zip(*zip(*all_labels))))
         # create a point for each label between which the connecting bezier
         # curve is drawn
-        points = {num: coord.Polar(r=1, theta= angle)
+        points = {num: coordinates.Polar(r=1, theta= angle)
                   for (num,_), angle in zip(all_unique_labels,
                                             np.linspace(0, 2*np.pi,
                                                 len(all_unique_labels), endpoint=False)
@@ -225,7 +219,7 @@ class Frequency:
         for i in cut.index:
             ax.plot(
                 *np.array(
-                    [b.convert().values for b in coord.bezier(
+                    [b.convert().values for b in coordinates.bezier(
                         points[cut.loc[i, 'number 1']],
                         points[cut.loc[i, 'number 2']]
                     )]).T,
@@ -347,221 +341,5 @@ class Frequency:
         "returns the `pandas.DataFrame.__repr__()` of the `Frequency.df`:instance_attribute:."
         return f"{self.df.__repr__()}"
 
-
-def heatmap(data: pd.DataFrame, *,
-            title: Optional[str] = None,
-            y_size: float = 4, cmap: str = 'Greens', **kwargs):
-    """Function to plot the heatmap of interactions.
-
-    The plotting is done using `seaborn.heatmap`. For further more thorough documentation check \
-their website. Below some possible keywords are elaborated. All keywords that are compatible \
-with `seaborn.heatmap` can be used.
-
-    :param data: pandas.DataFrame
-            data of merged DataFrame to be plotted.
-    :param title: Optional[str]
-            title of the figure.
-        :default: None
-    :param y_size: int|float
-            height of a single cell.
-        :default: 4
-    :param cmap: str
-            colormap to use for the connecting lines. Standard matplotlib colormaps
-            are supported.
-        :default: "Greens"
-            colormap from white to green.
-    :param cbar: bool
-            to display the colorbar belonging to the figure.
-        :default: True
-    :param vmin: float
-            low point for mapping the colors of :param cmap: to the cells values.
-        :default: 0
-    :param vmax: float
-            high point for mapping the colors of :param cmap: to the cells values.
-        :default: 1
-    :param annot: bool
-            to display the value inside the cells.
-        :default: False
-            disables the display of the cell value.
-    :param linewidths: float
-            thickness of the lines inbetween individual cells.
-        :default: 0.5
-    :param linecolor: str
-            color of the lines inbetween individual cells.
-        :default: "black"
-
-    :returns: matplotlib.figure
-            containing the heatmap
-
-    :raises: pandas.errors.EmptyDataError
-            when the merged DataFrame is empty.
-    """
-
-    kwargs = _kw_handler({
-        'cbar' : True,
-        'vmin' : 0,
-        'vmax' : 1,
-        'annot' : False,
-        'linewidths' : 0.5,
-        'linecolor' : 'black',
-        }, kwargs, error=False)
-
-    if data.empty:
-        raise pd.errors.EmptyDataError("The DataFrame is empty")
-
-    fig = plt.figure()
-    ax = fig.add_subplot()
-
-    sns.heatmap(data,
-                yticklabels = 1,
-                ax = ax,
-                cmap = cmap,
-                **kwargs)
-
-    # get square fields
-    fig.set_size_inches(
-        _resize(data.T.shape, y_size)
-    )
-    #fig.axes[0].set_yticklabels([f"{a}-{b}" for a, b in data.index])
-
-    if title:
-        fig.suptitle(title.upper())
-
-    ax.yaxis.set_label_text(None)
-    ax.set_xticklabels(ax.get_xticklabels(), rotation=90)
-    ax.set_yticklabels(ax.get_yticklabels(), rotation=0)
-
-    return fig
-
-def fingerprint(data: pd.DataFrame,*,
-                title: Optional[str] = None,
-                y_size: float = 4, cmap: str = 'Greens', **kwargs):
-    """Function to plot the fingerprint of interactions.
-
-    The plotting is done using `seaborn.clustermap`. For further more thorough documentation check \
-their website. Below some possible keywords are elaborated. All keywords that are compatible \
-with `seaborn.clustermap` can be used.
-
-    :param data: pandas.DataFrame
-            data of merged DataFrame to be plotted.
-    :param title: Optional[str]
-            title of the figure.
-        :default: None
-    :param y_size: int|float
-            height of a single cell.
-        :default: 4
-    :param cmap: str
-            colormap to use for the connecting lines. Standard matplotlib colormaps
-            are supported.
-        :default: "Greens"
-            colormap from white to green.
-    :param cbar_pos: tuple[float, float, float, float]
-            tuple of (left, bottom, width, heigth), controls the position of the
-            colorbar in the figure
-        :default: (1.5, 0.05, 0.1, 0.38)
-    :param vmin: float
-            low point for mapping the colors of :param cmap: to the cells values.
-        :default: 0
-    :param vmax: float
-            high point for mapping the colors of :param cmap: to the cells values.
-        :default: 1
-    :param annot: bool
-            to display the value inside the cells.
-        :default: False
-            disables the display of the cell value.
-    :param linewidths: float
-            thickness of the lines inbetween individual cells.
-        :default: 0.5
-    :param linecolor: str
-            color of the lines inbetween individual cells.
-        :default: "black"
-    :param dendrogram_ratio: float|tuple[float, float]
-            proportion of the figure size devoted to the dendrogram lines
-        :default: (0.2, 0)
-    :param col_cluster: bool
-            controls the clustering of the columns.
-        :default: False
-            disables the clustering of the columns.
-
-    :returns: matplotlib.figure
-            containing the fingerprint
-
-    :raises: pandas.errors.EmptyDataError
-            when the merged DataFrame is empty.
-    """
-    kwargs = _kw_handler({
-        'cbar_pos' : (1.5, 0.05, 0.1, 0.38),
-        'vmin' : 0,
-        'vmax' : 1,
-        'annot' : False,
-        'linewidths' : 0.5,
-        'linecolor' : 'black',
-        'dendrogram_ratio' : (0.2, 0),
-        'col_cluster' : False,
-        }, kwargs, error=False)
-
-    if data.empty:
-        raise pd.errors.EmptyDataError("The DataFrame is empty")
-
-    finger = sns.clustermap(
-            data,
-            yticklabels = 1,
-            cmap = cmap,
-            **kwargs)
-
-    # square fields
-    finger.fig.set_size_inches(
-        _resize(data.T.shape, y_size)
-    )
-
-    #finger.fig.axes[2].set_yticklabels([f"{a}-{b}" for a, b in data.index])
-    finger.ax_heatmap.yaxis.set_label_text(None)
-
-    if title:
-        finger.fig.suptitle(title.upper())
-    #finger.fig.supylabel('')
-
-    plt.setp(finger.ax_heatmap.yaxis.get_majorticklabels(), rotation=0)
-    plt.setp(finger.ax_heatmap.xaxis.get_majorticklabels(), rotation=90)
-
-    return finger
-
-
-three2one = {
-        'CYS' : 'C',
-        'CYX' : 'C',
-
-        'ASP' : 'D',
-        'ASH' : 'D+',
-        'ASN' : 'N',
-
-        'GLN' : 'Q',
-        'GLH' : 'E+',
-        'GLU' : 'E',
-
-        'LYS' : 'K',
-        'LYN' : 'K+',
-
-        'HIS' : 'H',
-        'HIE' : 'HIE',
-        'HID' : 'HID',
-        'HIP' : 'HIP',
-
-        'SER' : 'S',
-        'ILE' : 'I',
-        'PRO' : 'P',
-        'THR' : 'T',
-        'PHE' : 'F',
-        'GLY' : 'G',
-        'LEU' : 'L',
-        'ARG' : 'R',
-        'TRP' : 'W',
-        'ALA' : 'A',
-        'VAL' : 'V',
-        'TYR' : 'Y',
-        'MET' : 'M'
-    }
-
 if __name__ == '__main__':
-    import sys
     sys.exit()

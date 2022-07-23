@@ -1,24 +1,25 @@
-"""Module containing two classes for handeling 2D coordinates."""
+"""classes for handeling 2D coordinate system transformations."""
+from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import TypeVar
+import sys
 import numpy as np
 
-T = TypeVar("T", bound="Coordinate")
+Coord = TypeVar("Coord", bound="Coordinate")
 
 class Coordinate(ABC):
     """Abstract class used for the classes Cartesian and Polar."""
-
     @property
     def values(self) -> np.array:
         """return coordinates as :class:`np.array`"""
         return self._values
 
     @abstractmethod
-    def convert(self: T) -> T:
+    def convert(self: Coord) -> Coord:
         """convert Coordinate to different Coordinate."""
-        pass
+        ...
 
 @dataclass
 class Cartesian(Coordinate):
@@ -72,7 +73,7 @@ class Polar(Coordinate):
 
     def in_degrees(self) -> float:
         """Convenience method to convert :attr:`theta` from radians to degrees."""
-        return self.theta*180/np.pi #, self.r 
+        return self.theta*180/np.pi #, self.r
     # check why a tuple was returned!
 
 
@@ -116,4 +117,4 @@ def bezier(starting_point: Coordinate, end_point: Coordinate,
     return bezier_curve
 
 if __name__ == "__main__":
-    exit()
+    sys.exit()

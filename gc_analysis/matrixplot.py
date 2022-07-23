@@ -1,81 +1,78 @@
-from abc import ABC, abstractmethod
+"""Heatmaps and Clustermaps with added functionalities such as recoloring, and
+highlighting of labels."""
+from __future__ import annotations
 
+from abc import ABC, abstractmethod
+from typing import Iterable
+import sys
 import matplotlib.pyplot as plt
-import numpy as np
 import pandas as pd
 import seaborn as sns
 
-from .utils import _kw_handler, mask_gen, max_extent
+from .utils import _kw_handler, max_extent
+
 
 class MatrixPlot(ABC):
-    def __init__(self, data, fig=None, ax=None, **kwargs):
+    def __init__(self, data: pd.DataFrame,
+            fig: plt.Figure=None,
+            ax: plt.Axes=None):
         if data.empty:
             raise pd.errors.EmptyDataError("The DataFrame is empty")
         self.data = data
-        
+
         self.fig = fig
         self.ax = ax
-        
+
+        self.label_position = None
         self.label_data = None
         self.is_split = False
         self._mesh_data = None
 
     @abstractmethod
-    def plot(self,*, cmap, **kwargs):
+    def plot(self,*, cmap: str='Greens', **kwargs) -> MatrixPlot:
         pass
-    
-    def recolor_matrix(self, cmaps, masker):
+
+    def recolor_matrix(self, cmaps: list[str], masker: Iterable) -> MatrixPlot:
         mesh = self.ax.collections[0]
-        
         if self._mesh_data is None:
             self._mesh_data = mesh.get_array().data
-
         cmaps = [plt.cm.get_cmap(name, 256) for name in cmaps]
         fc = mesh.get_facecolors()
         for n, (mask, value) in enumerate(zip(masker, self._mesh_data)):
             fc[n] = cmaps[mask](value)
-
         mesh.set_array(None)
         mesh.set_facecolor(fc)
+        return self
 
-    def split_labels(self):
+    def split_labels(self) -> MatrixPlot:
         if not self.label_data:
             self._labeler()
         if not self.is_split:
             labels, _, _ = zip(*[v.values() for v in self.label_data.values()])
             ticks = list(self.label_data.keys())
-
             self.ax.set_yticks(ticks, labels)
-
             self.is_split = True
+        return self
 
-    def align_labels(self, *, factor=None):
-        if factor is not None:
-            self.factor = factor
-
+    def align_labels(self, *, factor: float) -> MatrixPlot:
         _, _, shifts = zip(*[v.values() for v in self.label_data.values()])
         extent = max_extent(self.ax)
-        
+
         for label, shift in zip(self.ax.get_yticklabels(), shifts):
             pos = label.get_position()
             label.set_position(
-                    (self.label_position + self.factor*shift*extent, pos[1])
+                    (self.label_position + factor*shift*extent, pos[1])
                     )
-        return self.ax
+        return self
 
-    def color_labels(self, colors, alpha = 0.5):
+    def color_labels(self, colors: list[str], alpha: float=0.5) -> MatrixPlot:
         if not self.is_split:
             self.split_labels()
-
         _, systems, _ = zip(*[v.values() for v in self.label_data.values()])
-
-        if isinstance(colors, str):
-            colors = [colors]
         # there are always 2 systems due to - or / being system 0
         while len(colors) < len(set(systems))-1:
             # "none" equals no color, regular None colors blue somehow
             colors.append("none")
-
         for label, system in zip(self.ax.get_yticklabels(), systems):
             if system:
                 label.set_bbox(
@@ -85,16 +82,17 @@ class MatrixPlot(ABC):
                             edgecolor="none",
                             )
                         )
+        return self
 
-    def _norm_fig_size(self, norm=100):
+    def norm_fig_size(self, norm: float=100) -> MatrixPlot:
         bb = self.ax.get_window_extent()
         scale = self.data.columns.shape[0] * norm / bb.width
         self.fig.set_size_inches(self.fig.get_size_inches()*scale)
-    
-    def _labeler(self):
+        return self
+
+    def _labeler(self) -> MatrixPlot:
         n_systems_left = max(
-                [len(set(label.get_text().split('-')[::2])) for label in self.ax.get_yticklabels()]
-                )
+                [len(label.get_text().split('-')[::2]) for label in self.ax.get_yticklabels()])
         label_data = dict()
         for label in self.ax.get_yticklabels():
             _, height = label.get_position()
@@ -102,12 +100,12 @@ class MatrixPlot(ABC):
 
             left = split[::2]
             right = split[1::2]
-            
+
             if len(set(left)) == 1:
                 left = set(left)
             if len(set(right)) == 1:
                 right = set(right)
-            
+
             for system, (pos, l) in enumerate(enumerate(left), start=1):
                 if system > 1:
                     label_data[height+1e-10*pos+1e-11] = {
@@ -126,7 +124,7 @@ class MatrixPlot(ABC):
                     'system' : 0,
                     'pos' : pos-0.1,
                 }
-            
+
             for system, (pos, r) in enumerate(enumerate(right, start=pos), start=1):
                 pos += 0.2
                 if system > 1:
@@ -141,17 +139,19 @@ class MatrixPlot(ABC):
                     'pos' : pos,
                 }
 
-        self.label_data = label_data                       
-        return label_data
+        self.label_data = label_data
+        return self
+
+    def _repr_png_(self):
+        return display(self.fig)
 
 
 class Heatmapper(MatrixPlot):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.factor = -0.5
         self.label_position = 0
 
-    def plot(self, *, cmap: str = "Greens", **kwargs):
+    def plot(self, *, cmap: str="Greens", **kwargs) -> Heatmapper:
         kwargs = _kw_handler({
             'cbar' : True,
             'vmin' : 0,
@@ -174,20 +174,21 @@ class Heatmapper(MatrixPlot):
                 square = True,
                 **kwargs,
                 )
-        
+
         self.ax.yaxis.set_label_text(None)
         self.ax.set_xticklabels(self.ax.get_xticklabels(), rotation=90)
         self.ax.set_yticklabels(self.ax.get_yticklabels(), rotation=0)
+        return self
 
 
 class Fingerprinter(MatrixPlot):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.factor = 1
         self.label_position = 1
 
-    def plot(self, *, cmap:str = "Greens", cbar:bool=False, **kwargs):
+    def plot(self, *, cmap: str="Greens", **kwargs) -> Fingerprinter:
         kwargs = _kw_handler({
+            'cbar' : False,
             'cbar_pos' : (1.5, 0.05, 0.1, 0.38),
             'vmin' : 0,
             'vmax' : 1,
@@ -209,44 +210,47 @@ class Fingerprinter(MatrixPlot):
         self.ax = finger.ax_heatmap
 
         self.ax.set_aspect("equal", anchor=(0,0))
-        self.draw_cbar(cbar)
-        
+        self.draw_cbar(kwargs['cbar'])
+
         self.ax.yaxis.set_label_text(None)
         plt.setp(self.ax.yaxis.get_majorticklabels(), rotation=0)
         plt.setp(self.ax.xaxis.get_majorticklabels(), rotation=90)
+        return self
 
-    def set_title(self, text:str, pad: int = 10):
+    def set_title(self, text:str, pad: int = 10) -> Fingerprinter:
         self.ax.set_title(text, pad=pad)
+        return self
 
-    def draw_cbar(self, /, draw):
+    def draw_cbar(self, /, draw) -> Fingerprinter:
         self.fig.axes[3].set_visible(draw)
-    
+        return self
 
-def fingerprint(data: pd.DataFrame, *args, **kwargs):
+
+def fingerprint(data: pd.DataFrame, *args, **kwargs) -> Fingerprinter:
     """ Wrapper around the Fingerprinter class.
 
 The plotting is done using `seaborn.clustermap`. For further more
-thorough documentation check their website. Below some possible 
-keywords are elaborated. All keywords that are compatible with 
+thorough documentation check their website. Below some possible
+keywords are elaborated. All keywords that are compatible with
 `seaborn.clustermap` can be used.
 
 :param data: pandas.DataFrame
         data of merged DataFrame to be plotted.
 :param cmap: str
-        colormap to use for the connecting lines. Standard 
+        colormap to use for the connecting lines. Standard
         matplotlib colormaps are supported.
     :default: "Greens"
         colormap from white to green.
 :param cbar_pos: tuple[float, float, float, float]
-        tuple of (left, bottom, width, heigth), controls the 
+        tuple of (left, bottom, width, heigth), controls the
         position of the colorbar in the figure
     :default: (1.5, 0.05, 0.1, 0.38)
 :param vmin: float
-        low point for mapping the colors of :param cmap: to the 
+        low point for mapping the colors of :param cmap: to the
         cells values.
     :default: 0
 :param vmax: float
-        high point for mapping the colors of :param cmap: to the 
+        high point for mapping the colors of :param cmap: to the
         cells values.
     :default: 1
 :param annot: bool
@@ -260,7 +264,7 @@ keywords are elaborated. All keywords that are compatible with
         color of the lines inbetween individual cells.
     :default: "black"
 :param dendrogram_ratio: float|tuple[float, float]
-        proportion of the figure size devoted to the dendrogram 
+        proportion of the figure size devoted to the dendrogram
         lines
     :default: (0.2, 0)
 :param col_cluster: bool
@@ -275,23 +279,23 @@ keywords are elaborated. All keywords that are compatible with
     finger = Fingerprinter(data)
     finger.plot(*args, **kwargs)
     finger.split_labels()
-    finger._norm_fig_size()
     finger.align_labels(factor=2)
+    finger.norm_fig_size()
     return finger
 
 
-def heatmap(data, *args, **kwargs):
+def heatmap(data: pd.DataFrame, *args, **kwargs) -> Heatmapper:
     """ Wrapper around the Heatmapper class.
 
-The plotting is done using `seaborn.heatmap`. For further more 
-thorough documentation check their website. Below some possible 
-keywords are elaborated. All keywords that are compatible with 
+The plotting is done using `seaborn.heatmap`. For further more
+thorough documentation check their website. Below some possible
+keywords are elaborated. All keywords that are compatible with
 `seaborn.heatmap` can be used.
 
 :param data: pandas.DataFrame
         data of merged DataFrame to be plotted.
 :param cmap: str
-        colormap to use for the connecting lines. Standard 
+        colormap to use for the connecting lines. Standard
         matplotlib colormaps
         are supported.
     :default: "Greens"
@@ -300,11 +304,11 @@ keywords are elaborated. All keywords that are compatible with
         to display the colorbar belonging to the figure.
     :default: True
 :param vmin: float
-        low point for mapping the colors of :param cmap: to the 
+        low point for mapping the colors of :param cmap: to the
         cells values.
     :default: 0
 :param vmax: float
-        high point for mapping the colors of :param cmap: to the 
+        high point for mapping the colors of :param cmap: to the
         cells values.
     :default: 1
 :param annot: bool
@@ -327,36 +331,11 @@ keywords are elaborated. All keywords that are compatible with
     heat = Heatmapper(data)
     heat.plot(*args, **kwargs)
     heat.split_labels()
-    heat.align_labels()
-    heat._norm_fig_size()
+    heat.align_labels(factor=-0.5)
+    heat.norm_fig_size()
 
     return heat
 
 
 if __name__ == "__main__":
-    data = np.array(
-        [[3.80e+01, 3.09e+02, 3.21e-01, 0.00e+00],
-        [8.90e+01, 3.17e+02, 7.05e-01, 0.00e+00],
-        [9.00e+01, 3.17e+02, 0.00e+00, 8.15e-01],
-        [9.20e+01, 3.16e+02, 4.73e-01, 0.00e+00],
-        [9.30e+01, 2.67e+02, 7.81e-01, 0.00e+00],
-        [9.70e+01, 3.13e+02, 0.00e+00, 9.70e-01],
-        [1.18e+02, 3.48e+02, 3.25e-01, 0.00e+00],
-        [2.54e+02, 3.80e+01, 9.50e-01, 0.00e+00],
-        [2.54e+02, 3.90e+01, 0.00e+00,6.60e-01],
-        [3.19e+02, 3.60e+01, 6.35e-01, 0.00e+00],
-        [3.19e+02, 3.70e+01, 0.00e+00, 7.12e-01],
-        [3.20e+02, 5.50e+01, 4.12e-01, 0.00e+00]]
-        )
-    df = pd.DataFrame(data, columns=["number 1", "number 2", "wildtype", "mashup"])
-    df["number 1"] = df["number 1"].astype(np.int16)
-    df["number 2"] = df["number 2"].astype(np.int16)
-    df = df.set_index(["number 1", "number 2"])
-
-#     hm = Heatmap(df)
-#     hm.plot()
-
-    p = Fingerprinter(df)
-    p.plot()
-    p.recolor_matrix(["Greens", "Blues"], mask_gen(1,1))
-    plt.show()
+    sys.exit()

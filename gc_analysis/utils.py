@@ -1,16 +1,26 @@
-"""Module containing utility functions for handling the GetContacts Frequency
-Datafiles. Further helper functions that are used in the plotting functions
-are located here."""
+"""Utility functions for handling the GetContacts Frequency Datafiles and helper
+functions for the plotting functions."""
 
 from __future__ import annotations
 
 from functools import reduce, partial
 from collections import deque
 import sys
-from typing import Iterable
+from typing import Iterable, NamedTuple
 import mdtraj as md
 import numpy as np
+import matplotlib
 import pandas as pd
+
+class Mark(NamedTuple):
+    label: str
+    color: str
+    selection: Iterable
+
+
+class Label(NamedTuple):
+    n : int
+    tick: float
 
 
 def read_tsv(path: str, drop_chain_info: bool=True) -> pd.DataFrame:
@@ -26,9 +36,9 @@ def read_tsv(path: str, drop_chain_info: bool=True) -> pd.DataFrame:
     """
 
     df = pd.read_csv(path, sep=r'\t|:', skiprows=2, header=None, engine='python')
+    df.columns = ["chain 1", "res 1", "number 1", "chain 2",  "res 2", "number 2", "frequency"]
     if drop_chain_info:
-        df = df.drop(labels=[0,3], axis=1)
-    df.columns = ["res 1", "number 1", "res 2", "number 2", "frequency"]
+        df = df.drop(labels=["chain 1", "chain 2"], axis=1)
 
     return df
 
@@ -93,8 +103,16 @@ def merge_on_number(dfs: list[pd.DataFrame]) -> pd.DataFrame:
     :returns: pd.DataFrame
     """
 
-    prepared_dfs = [(df.drop(labels=["res 1", "res 2"], axis=1)
-                        .set_index(keys=["number 1", "number 2"])) for df in dfs]
+    prepared_dfs = list()
+    for df in dfs:
+        _df = (df.drop(
+                labels=["res 1", "res 2", "chain 1", "chain 2"],
+                axis=1,
+                errors="ignore",
+                )
+                .set_index(keys=["number 1", "number 2"]))
+        prepared_dfs.append(_df)
+
     concat = pd.concat(
             prepared_dfs,
             keys=range(len(prepared_dfs)),
@@ -155,7 +173,7 @@ def label_merged(df: pd.DataFrame, sequences: pd.DataFrame, inplace: bool=False)
         df = df.copy()
 
     df.index = pd.MultiIndex.from_arrays(
-            np.array([ind_pair * sequences.ndim for ind_pair in df.index.to_list()]).T,
+            np.array([ind_pair * sequences.shape[1] for ind_pair in df.index.to_list()]).T,
             names = np.repeat(sequences.columns, sequences.ndim),
             )
 
@@ -232,7 +250,7 @@ def sort_index(df: pd.DataFrame, *, inplace: bool=False):
     return df
 
 
-def max_extent(ax) -> float:
+def max_extent(ax: matplotlib.axes.Axes) -> float:
     """Get the max extent of all yticklabels.
 
     :param ax:
@@ -288,6 +306,40 @@ def _kw_handler(defaults: dict, kwargs:dict, error: bool = False):
     defaults.update(kwargs)
     return defaults
 
+three2one = {
+        'CYS' : 'C',
+        'CYX' : 'C',
+
+        'ASP' : 'D',
+        'ASH' : 'D+',
+        'ASN' : 'N',
+
+        'GLN' : 'Q',
+        'GLH' : 'E+',
+        'GLU' : 'E',
+
+        'LYS' : 'K',
+        'LYN' : 'K+',
+
+        'HIS' : 'H',
+        'HIE' : 'HIE',
+        'HID' : 'HID',
+        'HIP' : 'HIP',
+
+        'SER' : 'S',
+        'ILE' : 'I',
+        'PRO' : 'P',
+        'THR' : 'T',
+        'PHE' : 'F',
+        'GLY' : 'G',
+        'LEU' : 'L',
+        'ARG' : 'R',
+        'TRP' : 'W',
+        'ALA' : 'A',
+        'VAL' : 'V',
+        'TYR' : 'Y',
+        'MET' : 'M'
+    }
 
 if __name__ == '__main__':
     sys.exit()
