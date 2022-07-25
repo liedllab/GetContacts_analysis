@@ -13,6 +13,7 @@ setup(
         long_description=LONG_DESCRIPTION,
         packages=find_packages(),
         install_requires=[
+            "cython",
             "matplotlib",
             "mdtraj",
             "numpy",
