@@ -221,7 +221,7 @@ class Fingerprinter(MatrixPlot):
         self.ax.set_title(text, pad=pad)
         return self
 
-    def draw_cbar(self, /, draw) -> Fingerprinter:
+    def draw_cbar(self, draw: bool) -> Fingerprinter:
         self.fig.axes[3].set_visible(draw)
         return self
 

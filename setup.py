@@ -1,8 +1,8 @@
 from setuptools import setup, find_packages
 
-VERSION = "0.0.2"
+VERSION = "0.1.0"
 DESCRIPTION = "GetContacts-analysis"
-LONG_DESCRIPTION = "github.com/liedllab/Getcontacts-analysis"
+LONG_DESCRIPTION = "github.com/liedllab/Getcontacts-analysis/gc_analysis/"
 
 setup(
         name="gc_analysis",
@@ -15,10 +15,10 @@ setup(
         install_requires=[
             "cython",
             "matplotlib",
-            "mdtraj",
             "numpy",
             "pandas",
             "seaborn",
+            "mdtraj",
             ],
 
         keywords=["python", "GetContacts", "fingerprint", "flareplot"],
