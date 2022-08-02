@@ -8,14 +8,10 @@ GetContacts frequency files.
 ## Installation
 
 Please ensure that you have a python version higher than 3.7 for this package to
-work properly. First change to the directory containing the cloned repository. The
-package can then be installed via
-
-### Building with setup.py
+work properly. 
 
 ```bash
-python setup.py sdist bdist_wheel
-python setup.py install --user
+pip install git+https://github.com/liedllab/GetContacts_analysis.git
 ```
 
 ### Import
