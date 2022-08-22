@@ -5,6 +5,7 @@ from abc import ABC, abstractmethod
 from itertools import chain
 from typing import NamedTuple
 import sys
+import warnings
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -53,9 +54,13 @@ class MarkupStrategy(ABC):
 
 class RangeMarkup(MarkupStrategy):
     def selector(self, positions, label, color, selection) -> None:
-        values = positions.loc[
-                [closest(min(selection), positions.index, lower=True),
-                    closest(max(selection), positions.index, lower=False)]].values
+        try:
+            values = positions.loc[
+                    [closest(min(selection), positions.index, lower=True),
+                        closest(max(selection), positions.index, lower=False)]].values
+        except IndexError:
+            warnings.warn(f"{label} at {selection} not found")
+            values = np.nan
         self._mark.append(values + self.gap(positions.values[1]))
         self._colors.append(color)
         self._labels.append(label)
@@ -183,7 +188,12 @@ class Flareplotter:
         strat.marks(self.positions, marking)
 
         for _, row in strat.data.iterrows():
-            thetas = np.arange(row[0], row[1]+0.01, 0.01)
+            if not np.isnan(row[0]):
+                thetas = np.arange(row[0], row[1]+0.01, 0.01)
+                visibility = True
+            else:
+                thetas = [0]
+                visibility = False
             fill = self.ax.fill_between(
                     thetas,
                     np.ones_like(thetas),
@@ -192,6 +202,7 @@ class Flareplotter:
                     label=row["label"],
                     zorder=11
                     )
+            fill.set_visible(visibility)
             self.highlighted.append(fill)
 
         self.ax.set_rlim(top=1.1)

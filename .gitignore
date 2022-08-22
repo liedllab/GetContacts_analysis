@@ -13,3 +13,4 @@ dist/
 # development
 .coverage
 venv/
+.env/
