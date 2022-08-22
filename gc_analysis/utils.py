@@ -228,7 +228,9 @@ def mask_gen(*args: int):
             for _ in range(arg):
                 yield n
 
-def sort_index(df: pd.DataFrame, *, inplace: bool=False):
+def sort_index(df: pd.DataFrame, *,
+               inplace: bool=False,
+               merge_duplicate: bool=False) -> pd.DataFrame:
     """Sorts the index of DataFrame.
 
     :param df: pd.DataFrame
@@ -236,6 +238,8 @@ def sort_index(df: pd.DataFrame, *, inplace: bool=False):
     :param inplace: bool
             change the merged DataFrame inplace or not.
         :default: True
+    :param merge_duplicate: bool
+            merge duplicate labels after the sorting of the indices.
 
     :returns: pd.DataFrame
             with sorted index
@@ -247,6 +251,11 @@ def sort_index(df: pd.DataFrame, *, inplace: bool=False):
     df.index = pd.MultiIndex.from_arrays(
             np.array([sorted(pair) for pair in df.index]).T
             )
+    if merge_duplicate:
+        df = (df.reset_index()
+                .groupby(['level_0', 'level_1'])[list(df.columns)]
+                .sum())
+
     return df
 
 
