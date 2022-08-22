@@ -6,6 +6,7 @@ from abc import ABC, abstractmethod
 from typing import Iterable
 import sys
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 import seaborn as sns
 
@@ -91,8 +92,14 @@ class MatrixPlot(ABC):
         return self
 
     def _labeler(self) -> MatrixPlot:
-        n_systems_left = max(
-                [len(label.get_text().split('-')[::2]) for label in self.ax.get_yticklabels()])
+        
+        left_labels = [set(label.get_text().split('-')[::2]) for label in self.ax.get_yticklabels()]
+
+        if any([len(labels)-1 for labels in left_labels]):
+            n_systems_left = len(self.ax.get_yticklabels()[0].get_text().split('-')[::2])
+        else:
+            n_systems_left = 1
+
         label_data = dict()
         for label in self.ax.get_yticklabels():
             _, height = label.get_position()
@@ -100,12 +107,11 @@ class MatrixPlot(ABC):
 
             left = split[::2]
             right = split[1::2]
-
             if len(set(left)) == 1:
                 left = set(left)
             if len(set(right)) == 1:
                 right = set(right)
-
+            
             for system, (pos, l) in enumerate(enumerate(left), start=1):
                 if system > 1:
                     label_data[height+1e-10*pos+1e-11] = {
@@ -209,7 +215,11 @@ class Fingerprinter(MatrixPlot):
         self.fig = finger.fig
         self.ax = finger.ax_heatmap
 
-        self.ax.set_aspect("equal", anchor=(0,0))
+        # self.ax.set_aspect("equal", anchor=(0,0))
+        self.fig.set_size_inches(
+                self.fig.get_size_inches() * \
+                        np.array([1, np.divide(*(self.ax.bbox.size / self.data.T.shape))])
+                        )
         self.draw_cbar(kwargs['cbar'])
 
         self.ax.yaxis.set_label_text(None)
