@@ -96,7 +96,7 @@ class IndividualMarkup(MarkupStrategy):
 
 
 class Flareplotter:
-    def __init__(self, data, fig=None, ax=None):
+    def __init__(self, data, fig=None, ax=None, sort_kw={}):
         self.data = data
 
         if not ax:
@@ -110,6 +110,7 @@ class Flareplotter:
         self.highlighted = list()
         self.labels = None
         self.ticks = None
+        self.sort_kw = sort_kw
 
 
     def plot(self, *, cmap: str = "Greys", cbar: bool=False,
@@ -146,9 +147,11 @@ class Flareplotter:
         self.ax.grid(False)
 
         info = self.label_info()
-        self.ax.set_xticks(self.ticks, self.labels)
+        self.ax.set_xticks(self.ticks)
+        self.ax.set_xticklabels(self.labels)
         self.ax.set_rlim(top=1)
         self.ax.set_yticklabels([])
+gc
 
         sm_cmap = plt.cm.ScalarMappable(
                 cmap=cmap,
@@ -228,6 +231,23 @@ class Flareplotter:
         self.ax.spines['polar'].set_visible(True)
         return self
 
+    def replace_labels(self, new_labels: list[str]):
+        """Replace rotated "labels" with new labels.
+
+        :param new_labels: list[str]
+            List with new labels as string
+
+        """
+        if len(new_labels) != len(self.ax.texts):
+            msg = ("Make sure that the length of new labels matches the number of ticks. "
+                   "Further the labels should have already been replaced by texts throught the "
+                   "use of `rotate_labels()`, if not you might want to use ax.set_xticklabels()")
+            raise ValueError(msg)
+
+        for old, new in zip(self.ax.texts, new_labels):
+            old.set_text(new)
+
+
     def rotate_labels(self, shift: float=-0.1) -> Flareplotter:
         self.reset_labels()
         self.fig.canvas.draw()
@@ -256,10 +276,15 @@ class Flareplotter:
             self.ax.texts[0].remove()
 
         labels, ticks = zip(*[(text, label.tick) for text, label in self.label_info().items()])
-        self.ax.set_xticks(ticks, labels)
+        self.ax.set_xticks(ticks)
+        self.ax.set_xticklabels(labels)
 
     def label_info(self):
-        unique_labels = set(chain(*self.data.index))
+        unique_labels = sorted(set(chain(*self.data.index)), **self.sort_kw)
+        # int(''.join(
+        #       (str(label) for label in unique_labelsgc
+        #        if str.isdigit(label))
+        # ))
         numbers = map(
                 lambda lab: int(''.join(filter(str.isdigit, str(lab)))),
                 unique_labels,
@@ -296,7 +321,7 @@ class Flareplotter:
         return display(self.fig)
 
 
-def flareplot(data, *, cmap="Greys", ax=None, **line_kwargs):
+def flareplot(data, *, cmap="Greys", ax=None, sort_kw={}, **line_kwargs):
     """Wrapper around Flareplotter class.
 
 :param data: pandas.DataFrame
@@ -328,7 +353,7 @@ def flareplot(data, *, cmap="Greys", ax=None, **line_kwargs):
 :returns: Fingerprinter
         """
 
-    flare = Flareplotter(data, ax=ax)
+    flare = Flareplotter(data, ax=ax, sort_kw=sort_kw)
     flare.plot(cmap=cmap, **line_kwargs)
     flare.rotate_labels()
     return flare
