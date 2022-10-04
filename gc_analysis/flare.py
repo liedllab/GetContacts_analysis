@@ -151,7 +151,6 @@ class Flareplotter:
         self.ax.set_xticklabels(self.labels)
         self.ax.set_rlim(top=1)
         self.ax.set_yticklabels([])
-gc
 
         sm_cmap = plt.cm.ScalarMappable(
                 cmap=cmap,
