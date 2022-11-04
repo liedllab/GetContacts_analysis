@@ -108,9 +108,9 @@ class Flareplotter:
         self.fig = fig
         self.ax = ax
         self.highlighted = list()
-        self.labels = None
-        self.ticks = None
         self.sort_kw = sort_kw
+
+        self._label_info = None
 
 
     def plot(self, *, cmap: str = "Greys", cbar: bool=False,
@@ -146,9 +146,9 @@ class Flareplotter:
         self.ax.set_theta_zero_location("E", offset=0)
         self.ax.grid(False)
 
-        info = self.label_info()
-        self.ax.set_xticks(self.ticks)
-        self.ax.set_xticklabels(self.labels)
+        labels, ticks = zip(*[(text, label.tick) for text, label in self.label_info.items()])
+        self.ax.set_xticks(ticks)
+        self.ax.set_xticklabels(labels)
         self.ax.set_rlim(top=1)
         self.ax.set_yticklabels([])
 
@@ -163,8 +163,8 @@ class Flareplotter:
 
         for (left, right), value in self.data.iteritems():
             curve = bezier(
-                    Polar(theta=info[left].tick, r=1),
-                    Polar(theta=info[right].tick, r=1),
+                    Polar(theta=self.label_info[left].tick, r=1),
+                    Polar(theta=self.label_info[right].tick, r=1),
                     )
             curve_points = np.array([point.convert().values for point in curve])
             lw = (linewidth + value)**2 if scale_thickness else linewidth
@@ -255,7 +255,7 @@ class Flareplotter:
             text = label.get_text()
             if text.isnumeric():
                 text = int(text)
-            deg = np.rad2deg(self.label_info()[text].tick)
+            deg = np.rad2deg(self.label_info[text].tick)
 
             if 90 <= deg <= 270:
                 deg -= 180
@@ -271,43 +271,46 @@ class Flareplotter:
         return self
 
     def reset_labels(self):
-        for _ in range(len(self.ax.texts)):
+        while len(self.ax.texts) != 0:
+#        for _ in range(len(self.ax.texts)):
             self.ax.texts[0].remove()
 
-        labels, ticks = zip(*[(text, label.tick) for text, label in self.label_info().items()])
+        labels, ticks = zip(*[(text, label.tick) for text, label in self.label_info.items()])
         self.ax.set_xticks(ticks)
         self.ax.set_xticklabels(labels)
-
+    
+    @property
     def label_info(self):
-        unique_labels = sorted(set(chain(*self.data.index)), **self.sort_kw)
-        # int(''.join(
-        #       (str(label) for label in unique_labelsgc
-        #        if str.isdigit(label))
-        # ))
-        numbers = map(
-                lambda lab: int(''.join(filter(str.isdigit, str(lab)))),
-                unique_labels,
-                )
+        if not self._label_info is None:
+            return self._label_info
+        
+        unique_labels = {label for label in chain(*self.data.index)}
+        try:
+            unique_labels = sorted(unique_labels, **self.sort_kw)
+        except TypeError as err:
+            print(unique_labels)
+            raise TypeError from err
+
+        numbers = [int(''.join([number for number in label if number.isdigit()]))
+                                       for label in unique_labels]
         ticks = np.linspace(0, 2*np.pi, endpoint=False, num=len(unique_labels))
 
         try:
             info = dict()
-            for (number, label), tick in zip(
-                    sorted(zip(numbers, unique_labels)),
-                    ticks,
-                    ):
+            for (number, label), tick in zip(sorted(zip(numbers, unique_labels)),
+                                             ticks):
                 info[label] = Label(number, tick)
         except ValueError:
             info = dict()
             for number, (label, tick) in enumerate(zip(unique_labels, ticks)):
                 info[label] = Label(number, tick)
 
-        self.labels, self.ticks = zip(*[(text, label.tick) for text, label in info.items()])
+        self._label_info = info
         return info
 
     @property
     def positions(self) -> pd.Series:
-        df = pd.DataFrame(self.label_info()).T
+        df = pd.DataFrame(self.label_info).T
         df[0] = df[0].astype(int)
         df = (df.set_index(0, append=True)
                 .swaplevel())

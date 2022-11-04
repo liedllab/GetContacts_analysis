@@ -77,7 +77,9 @@ def select(df: pd.DataFrame,
             "range" : lambda x: range(x[0], x[-1]+include_end),
             "selection" : lambda x: x,
             }
-    selection = deque(map(sel_function[kind], selection))
+    func = sel_function[kind]
+    selection = deque(func(sel) for sel in selection)
+#    selection = deque(map(sel_function[kind], selection))
     selection.appendleft(df)
 
     par_selector = partial(_selector, exclusive)
