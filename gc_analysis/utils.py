@@ -179,7 +179,7 @@ def label_merged(df: pd.DataFrame, sequences: pd.DataFrame, inplace: bool=False)
             names = np.repeat(sequences.columns, sequences.ndim),
             )
 
-    for n, (_, col) in enumerate(sequences.iteritems()):
+    for n, (_, col) in enumerate(sequences.items()):
         df = (df.rename(col.to_dict(), level=n*2)
                 .rename(col.to_dict(), level=1+n*2))
 
